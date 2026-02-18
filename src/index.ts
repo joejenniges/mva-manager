@@ -18,6 +18,10 @@ const app = express();
 
 // WHY: Google OAuth loads scripts from accounts.google.com/gsi and uses
 // inline styles. Default helmet CSP blocks both, breaking the sign-in button.
+// WHY: crossOriginOpenerPolicy must be "same-origin-allow-popups" because
+// useGoogleLogin opens a popup to accounts.google.com. The popup communicates
+// the credential back via window.opener. Helmet's default "same-origin" severs
+// that link, so the popup completes but the token never reaches our callback.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -29,6 +33,7 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org", "https://api.mapbox.com"],
     },
   },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
 }));
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));

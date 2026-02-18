@@ -33,6 +33,14 @@ services:
   postgres:
     image: postgres:17
     container_name: mva-postgres
+    # WHY: Exposed on the Tailscale IP so Joe can connect remotely.
+    # Docker port mappings bypass UFW (Docker manipulates iptables directly),
+    # so binding to 0.0.0.0 would expose postgres to the public internet
+    # regardless of firewall rules. Binding to the Tailscale IP ensures
+    # only Tailscale peers can reach it.
+    # Get the IP with: tailscale ip -4
+    ports:
+      - "${TAILSCALE_IP:-127.0.0.1}:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
