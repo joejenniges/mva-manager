@@ -33,8 +33,10 @@ services:
   postgres:
     image: postgres:17
     container_name: mva-postgres
+    # WHY: Bind to Tailscale IP so only Tailscale peers can reach postgres.
+    # Docker port mappings bypass UFW, so 0.0.0.0 would be publicly accessible.
     ports:
-      - "5432:5432"
+      - "${TAILSCALE_IP}:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
