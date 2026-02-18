@@ -30,7 +30,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
       frameSrc: ["'self'", "https://accounts.google.com", "blob:"],
       connectSrc: ["'self'", "https://accounts.google.com", "https://api.mapbox.com", "https://events.mapbox.com"],
-      imgSrc: ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org", "https://api.mapbox.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org", "https://api.mapbox.com", "https://*.basemaps.cartocdn.com"],
     },
   },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
