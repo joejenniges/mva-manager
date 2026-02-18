@@ -16,7 +16,20 @@ const app = express();
 
 // --- Middleware ---
 
-app.use(helmet());
+// WHY: Google OAuth loads scripts from accounts.google.com/gsi and uses
+// inline styles. Default helmet CSP blocks both, breaking the sign-in button.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://accounts.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
+      frameSrc: ["'self'", "https://accounts.google.com"],
+      connectSrc: ["'self'", "https://accounts.google.com", "https://api.mapbox.com", "https://events.mapbox.com"],
+      imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org", "https://api.mapbox.com"],
+    },
+  },
+}));
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use(pinoHttp({ logger }));
