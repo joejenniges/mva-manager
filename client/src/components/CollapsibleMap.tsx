@@ -21,11 +21,13 @@ export default function CollapsibleMap({ lat, lng, label }: Props) {
   }
 
   function navigate() {
-    // WHY: Apple Maps on iOS/macOS, Google Maps everywhere else
+    // WHY: geo: URI on Android triggers the OS app picker (Google Maps, Waze,
+    // etc.) instead of forcing one app. Apple doesn't handle geo: URIs, so we
+    // use maps: which opens Apple Maps (or the user's default maps app on iOS 18+).
     const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
     const url = isApple
       ? `maps://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(label)}`
-      : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+      : `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(label)})`;
     window.open(url, "_blank");
   }
 
