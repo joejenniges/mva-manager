@@ -5,5 +5,4 @@ client/node_modules/
 .env
 uploads/*
 !uploads/.gitkeep
-drizzle/meta/
 *.tsbuildinfo
