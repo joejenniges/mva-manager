@@ -1,0 +1,59 @@
+interface CostItem {
+  id: string;
+  description: string | null;
+  billingCode: string | null;
+  amount: string;
+  type: string;
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  charge: "Charge",
+  payment: "Payment",
+  adjustment: "Adjustment",
+  write_off: "Write-off",
+  patient_payment: "Patient Payment",
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  charge: "text-gray-100",
+  payment: "text-green-400",
+  adjustment: "text-blue-400",
+  write_off: "text-yellow-400",
+  patient_payment: "text-green-300",
+};
+
+export default function CostTable({ items, onDelete }: {
+  items: CostItem[];
+  onDelete: (id: string) => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-gray-700">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-800 text-gray-300">
+          <tr>
+            <th className="px-3 py-2 text-left font-medium">Type</th>
+            <th className="px-3 py-2 text-left font-medium">Description</th>
+            <th className="px-3 py-2 text-left font-medium">Code</th>
+            <th className="px-3 py-2 text-right font-medium">Amount</th>
+            <th className="w-8"></th>
+          </tr>
+        </thead>
+        <tbody className="bg-gray-900">
+          {items.map((item) => (
+            <tr key={item.id} className="border-t border-gray-800">
+              <td className={`px-3 py-2 ${TYPE_COLORS[item.type] || "text-gray-300"}`}>{TYPE_LABELS[item.type]}</td>
+              <td className="px-3 py-2 text-gray-300">{item.description || "-"}</td>
+              <td className="px-3 py-2 font-mono text-xs text-gray-400">{item.billingCode || "-"}</td>
+              <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-100">${parseFloat(item.amount).toFixed(2)}</td>
+              <td className="px-3 py-2">
+                <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-300">x</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
