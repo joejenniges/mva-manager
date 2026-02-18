@@ -4,6 +4,10 @@ WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm ci
 COPY client/ ./
+# WHY: Vite inlines VITE_* env vars at build time via import.meta.env.
+# Must be available as an env var during `npm run build`, not at runtime.
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 # Stage 2: Build server
