@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { api, getStoredEventId, setStoredEventId, clearStoredEventId } from "./api";
+import { useAuth } from "./auth";
 
 export interface Event {
   id: string;
@@ -34,6 +35,7 @@ const EventContext = createContext<EventState>({
 });
 
 export function EventProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [activeEvent, setActiveEventState] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,18 @@ export function EventProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(refreshEvents, [refreshEvents]);
+  // WHY: Re-fetch when user changes (login/logout). On a fresh browser
+  // the initial fetch fires before auth completes, gets a 401, and
+  // silently leaves events empty. This re-triggers once login finishes.
+  useEffect(() => {
+    if (user) {
+      refreshEvents();
+    } else {
+      setEvents([]);
+      setActiveEventState(null);
+      setLoading(false);
+    }
+  }, [user, refreshEvents]);
 
   const setActiveEvent = useCallback((event: Event) => {
     setActiveEventState(event);
