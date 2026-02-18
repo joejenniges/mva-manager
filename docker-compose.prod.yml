@@ -8,7 +8,7 @@ services:
     ports:
       - "127.0.0.1:3100:3100"
     volumes:
-      - uploads_data:/app/uploads
+      - /mnt/yto-c528effc6f9d49/mva-manager/uploads_data:/app/uploads
     environment:
       NODE_ENV: production
       PORT: 3100
@@ -38,7 +38,7 @@ services:
     ports:
       - "${TAILSCALE_IP}:5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /mnt/yto-c528effc6f9d49/mva-manager/postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: mva-manager
       POSTGRES_USER: postgres
@@ -50,6 +50,3 @@ services:
       timeout: 5s
       retries: 5
 
-volumes:
-  postgres_data:
-  uploads_data:
