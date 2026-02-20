@@ -71,12 +71,14 @@ export default function EventsPage() {
         const parts = [row.city, row.state].filter(Boolean);
         return parts.length > 0 ? parts.join(", ") : "--";
       },
+      hideOnMobile: true,
     },
     {
       key: "notes",
       label: "Notes",
       render: (row) =>
         row.notes ? (row.notes.length > 60 ? row.notes.slice(0, 60) + "..." : row.notes) : "--",
+      hideOnMobile: true,
     },
   ];
 
@@ -86,7 +88,7 @@ export default function EventsPage() {
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
     >
       New Event
-      <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">N</kbd>
+      <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
     </button>
   );
 

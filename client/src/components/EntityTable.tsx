@@ -6,6 +6,7 @@ export interface Column<T> {
   key: string;
   label: string;
   render?: (row: T) => ReactNode;
+  hideOnMobile?: boolean;
 }
 
 interface EntityTableProps<T> {
@@ -87,7 +88,7 @@ export default function EntityTable<T extends { id: string }>({
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-400"
+                  className={`px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-400${col.hideOnMobile ? " hidden md:table-cell" : ""}`}
                 >
                   {col.label}
                 </th>
@@ -133,7 +134,7 @@ export default function EntityTable<T extends { id: string }>({
                     {columns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-4 py-2.5 text-gray-300"
+                        className={`px-4 py-2.5 text-gray-300${col.hideOnMobile ? " hidden md:table-cell" : ""}`}
                       >
                         {col.render
                           ? col.render(row)

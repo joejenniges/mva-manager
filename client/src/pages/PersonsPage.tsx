@@ -62,11 +62,13 @@ export default function PersonsPage() {
       key: "phone",
       label: "Phone",
       render: (row) => row.phone || "--",
+      hideOnMobile: true,
     },
     {
       key: "email",
       label: "Email",
       render: (row) => row.email || "--",
+      hideOnMobile: true,
     },
     {
       key: "roles",
@@ -91,7 +93,7 @@ export default function PersonsPage() {
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
     >
       New Person
-      <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">N</kbd>
+      <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
     </button>
   );
 

@@ -37,9 +37,9 @@ export default function LocationsPage() {
   const columns: Column<Location>[] = [
     { key: "title", label: "Title" },
     { key: "address", label: "Address", render: (row) => row.address || "--" },
-    { key: "city", label: "City", render: (row) => row.city || "--" },
-    { key: "state", label: "State", render: (row) => row.state || "--" },
-    { key: "zip", label: "Zip", render: (row) => row.zip || "--" },
+    { key: "city", label: "City", render: (row) => row.city || "--", hideOnMobile: true },
+    { key: "state", label: "State", render: (row) => row.state || "--", hideOnMobile: true },
+    { key: "zip", label: "Zip", render: (row) => row.zip || "--", hideOnMobile: true },
   ];
 
   const addButton = (
@@ -48,7 +48,7 @@ export default function LocationsPage() {
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
     >
       New Location
-      <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">N</kbd>
+      <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
     </button>
   );
 

@@ -125,20 +125,20 @@ export default function AppointmentsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-100">Appointments</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setShowTemplateModal(true)}
             className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-600"
           >
             From Template
-            <kbd className="relative -top-px ml-1.5 rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400">F</kbd>
+            <kbd className="relative -top-px ml-1.5 hidden rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400 md:inline">F</kbd>
           </button>
           <button
             onClick={() => navigate("/appointments/new")}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             New Appointment
-            <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">N</kbd>
+            <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
           </button>
         </div>
       </div>
@@ -195,11 +195,11 @@ export default function AppointmentsPage() {
               <SortHeader field="datetime" label="Date" sort={sort} order={order} onSort={handleSort} className="w-32" />
               <SortHeader field="patient" label="Patient" sort={sort} order={order} onSort={handleSort} className="w-28" />
               <SortHeader field="organization" label="Organization" sort={sort} order={order} onSort={handleSort} />
-              <SortHeader field="title" label="Title" sort={sort} order={order} onSort={handleSort} />
-              <th className="px-4 py-3 text-left font-medium">Activities</th>
-              <th className="px-4 py-3 text-right font-medium">Docs</th>
-              <th className="px-4 py-3 text-right font-medium">Charges</th>
-              <th className="px-4 py-3 text-right font-medium">Balance</th>
+              <SortHeader field="title" label="Title" sort={sort} order={order} onSort={handleSort} className="hidden md:table-cell" />
+              <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Activities</th>
+              <th className="hidden px-4 py-3 text-right font-medium md:table-cell">Docs</th>
+              <th className="hidden px-4 py-3 text-right font-medium md:table-cell">Charges</th>
+              <th className="hidden px-4 py-3 text-right font-medium md:table-cell">Balance</th>
             </tr>
           </thead>
           <tbody className="bg-gray-900">
@@ -231,19 +231,19 @@ export default function AppointmentsPage() {
                   <td className="px-4 py-3 text-gray-300">
                     {appt.organization ? <ColorDot name={appt.organization.name} color={appt.organization.color} /> : "-"}
                   </td>
-                  <td className="px-4 py-3 text-gray-100">{appt.title || "Untitled"}</td>
-                  <td className="px-4 py-3">
+                  <td className="hidden px-4 py-3 text-gray-100 md:table-cell">{appt.title || "Untitled"}</td>
+                  <td className="hidden px-4 py-3 md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {appt.appointmentActivities.map((aa) => (
                         <TagBadge key={aa.activity.id} label={aa.activity.title} color={aa.activity.color} />
                       ))}
                     </div>
                   </td>
-                  <td className={`px-4 py-3 text-right ${appt.documentAppointments.length === 0 ? "text-red-400" : (appt.documentAppointments.length == 1 ? "text-yellow-400" : "text-gray-300")}`}>
+                  <td className={`hidden px-4 py-3 text-right md:table-cell ${appt.documentAppointments.length === 0 ? "text-red-400" : (appt.documentAppointments.length == 1 ? "text-yellow-400" : "text-gray-300")}`}>
                     {appt.documentAppointments.length}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-300">{charges > 0 ? `$${charges.toFixed(2)}` : "-"}</td>
-                  <td className={`px-4 py-3 text-right ${balance > 0 ? "text-yellow-400" : balance === 0 && charges > 0 ? "text-green-500" : "text-gray-500"}`}>
+                  <td className="hidden px-4 py-3 text-right text-gray-300 md:table-cell">{charges > 0 ? `$${charges.toFixed(2)}` : "-"}</td>
+                  <td className={`hidden px-4 py-3 text-right md:table-cell ${balance > 0 ? "text-yellow-400" : balance === 0 && charges > 0 ? "text-green-500" : "text-gray-500"}`}>
                     {charges > 0 ? `$${balance.toFixed(2)}` : "-"}
                   </td>
                 </tr>
@@ -253,9 +253,10 @@ export default function AppointmentsPage() {
           {!loading && data.length > 0 && (
             <tfoot className="border-t border-gray-700 bg-gray-800/50">
               <tr>
-                <td colSpan={6} className="px-4 py-2 text-right text-sm font-medium text-gray-400">Total ({total} appointments)</td>
-                <td className="px-4 py-2 text-right text-sm font-medium text-gray-200">{totalCharges > 0 ? `$${totalCharges.toFixed(2)}` : "-"}</td>
-                <td className={`px-4 py-2 text-right text-sm font-medium ${totalBalance > 0 ? "text-yellow-400" : totalBalance === 0 && totalCharges > 0 ? "text-green-500" : "text-gray-500"}`}>
+                <td colSpan={3} className="px-4 py-2 text-right text-sm font-medium text-gray-400 md:hidden">Total ({total} appointments)</td>
+                <td colSpan={6} className="hidden px-4 py-2 text-right text-sm font-medium text-gray-400 md:table-cell">Total ({total} appointments)</td>
+                <td className="hidden px-4 py-2 text-right text-sm font-medium text-gray-200 md:table-cell">{totalCharges > 0 ? `$${totalCharges.toFixed(2)}` : "-"}</td>
+                <td className={`hidden px-4 py-2 text-right text-sm font-medium md:table-cell ${totalBalance > 0 ? "text-yellow-400" : totalBalance === 0 && totalCharges > 0 ? "text-green-500" : "text-gray-500"}`}>
                   {totalCharges > 0 ? `$${totalBalance.toFixed(2)}` : "-"}
                 </td>
               </tr>
@@ -286,7 +287,7 @@ export default function AppointmentsPage() {
                 className="rounded border border-gray-700 px-3 py-1 hover:bg-gray-800 disabled:opacity-50"
               >
                 Prev
-                <kbd className="relative -top-px ml-1.5 rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400">,</kbd>
+                <kbd className="relative -top-px ml-1.5 hidden rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400 md:inline">,</kbd>
               </button>
               <span className="px-2 py-1">Page {page} of {totalPages}</span>
               <button
@@ -295,7 +296,7 @@ export default function AppointmentsPage() {
                 className="rounded border border-gray-700 px-3 py-1 hover:bg-gray-800 disabled:opacity-50"
               >
                 Next
-                <kbd className="relative -top-px ml-1.5 rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400">.</kbd>
+                <kbd className="relative -top-px ml-1.5 hidden rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400 md:inline">.</kbd>
               </button>
             </div>
           )}

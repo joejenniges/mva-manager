@@ -55,6 +55,7 @@ export default function OrganizationsPage() {
       key: "email",
       label: "Email",
       render: (row) => row.email || "--",
+      hideOnMobile: true,
     },
     {
       key: "locations",
@@ -64,6 +65,7 @@ export default function OrganizationsPage() {
           {row.organizationLocations?.length ?? 0}
         </span>
       ),
+      hideOnMobile: true,
     },
     {
       key: "providers",
@@ -73,6 +75,7 @@ export default function OrganizationsPage() {
           {row.organizationPersons?.length ?? 0}
         </span>
       ),
+      hideOnMobile: true,
     },
   ];
 
@@ -82,7 +85,7 @@ export default function OrganizationsPage() {
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
     >
       New Organization
-      <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">N</kbd>
+      <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
     </button>
   );
 

@@ -147,9 +147,9 @@ export default function DocumentsPage() {
             <tr>
               <th className="px-4 py-3 text-left font-medium">Title / Filename</th>
               <th className="px-4 py-3 text-left font-medium">Type</th>
-              <th className="px-4 py-3 text-left font-medium">Appointments</th>
-              <th className="px-4 py-3 text-left font-medium">Size</th>
-              <th className="px-4 py-3 text-left font-medium">Uploaded</th>
+              <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Appointments</th>
+              <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Size</th>
+              <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Uploaded</th>
               <th className="w-20"></th>
             </tr>
           </thead>
@@ -174,7 +174,7 @@ export default function DocumentsPage() {
                 <td className="px-4 py-3">
                   {doc.documentType && <TagBadge label={doc.documentType.title} color={doc.documentType.color} />}
                 </td>
-                <td className="px-4 py-3 text-xs">
+                <td className="hidden px-4 py-3 text-xs md:table-cell">
                   {doc.documentAppointments.length > 0
                     ? doc.documentAppointments.map((da, idx) => (
                         <span key={da.appointment.id}>
@@ -191,8 +191,8 @@ export default function DocumentsPage() {
                     : <span className="text-yellow-500">Unorganized</span>
                   }
                 </td>
-                <td className="px-4 py-3 text-gray-400">{formatBytes(doc.fileSize)}</td>
-                <td className="px-4 py-3 text-gray-400">{new Date(doc.createdAt).toLocaleDateString()}</td>
+                <td className="hidden px-4 py-3 text-gray-400 md:table-cell">{formatBytes(doc.fileSize)}</td>
+                <td className="hidden px-4 py-3 text-gray-400 md:table-cell">{new Date(doc.createdAt).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
                   <button onClick={() => handleDelete(doc.id)} className="text-red-400 hover:text-red-300 text-xs">Delete</button>
                 </td>
