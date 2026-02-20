@@ -103,7 +103,7 @@ export default function AppointmentsPage() {
       if (item.type === "charge") charges += amt;
       else credits += amt;
     }
-    const balance = charges - credits;
+    const balance = (charges - credits) || 0;
     return { charges, balance };
   }
 
@@ -117,7 +117,7 @@ export default function AppointmentsPage() {
     setPage(1);
   }
 
-  const totalBalance = totalCharges - totalCredits;
+  const totalBalance = (totalCharges - totalCredits) || 0;
   const hasFilters = search || dateFrom || dateTo || patientId || organizationId;
   const totalPages = Math.ceil(total / limit);
 

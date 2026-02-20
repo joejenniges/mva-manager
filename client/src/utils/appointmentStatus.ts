@@ -8,7 +8,7 @@ export function calculateBalance(items: CostItem[]): { charges: number; payments
   const payments = items
     .filter((i) => i.type !== "charge")
     .reduce((s, i) => s + parseFloat(i.amount), 0);
-  return { charges, payments, balance: charges - payments };
+  return { charges, payments, balance: (charges - payments) || 0 };
 }
 
 export type VisitStatus = "Scheduled" | "Completed" | "Billed" | "Paid";
