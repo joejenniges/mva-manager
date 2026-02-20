@@ -8,6 +8,8 @@ COPY client/ ./
 # Must be available as an env var during `npm run build`, not at runtime.
 ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ARG VITE_COMMIT_HASH
+ENV VITE_COMMIT_HASH=$VITE_COMMIT_HASH
 RUN npm run build
 
 # Stage 2: Build server
