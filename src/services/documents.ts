@@ -1,4 +1,4 @@
-import { eq, ilike, asc, sql, and, or, notExists } from "drizzle-orm";
+import { eq, ilike, desc, sql, and, or, notExists } from "drizzle-orm";
 import { getDb } from "../db/connection.js";
 import { documents, documentTypes, documentAppointments, documentPersons, documentOrganizations } from "../db/schema/index.js";
 import { AppError } from "../middleware/errors.js";
@@ -71,7 +71,7 @@ export async function listDocuments(eventId: string, params: DocumentListParams)
         documentPersons: { with: { person: true } },
         documentOrganizations: { with: { organization: true } },
       },
-      orderBy: [asc(documents.createdAt)],
+      orderBy: [desc(documents.createdAt)],
       offset,
       limit,
     }),
