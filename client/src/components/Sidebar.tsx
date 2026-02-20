@@ -61,6 +61,7 @@ export default function Sidebar({ onNavClick, onOpenCommandPalette }: { onNavCli
       </nav>
 
       <div className="border-t border-gray-800 px-4 py-3">
+        <div className="mb-1 text-[10px] text-gray-600">{__COMMIT_HASH__}</div>
         <div className="mb-2 truncate text-xs text-gray-500">{user?.email}</div>
         <button
           onClick={logout}
