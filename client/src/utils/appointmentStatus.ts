@@ -3,12 +3,22 @@ interface CostItem {
   type: string;
 }
 
+// WHY: All arithmetic in integer cents to avoid IEEE 754 float drift entirely.
+// parseFloat("81.20") * 100 = 8120.000000000001, so we round to int immediately.
+const toCents = (s: string) => Math.round(parseFloat(s) * 100);
+const toDollars = (c: number) => c / 100;
+
 export function calculateBalance(items: CostItem[]): { charges: number; payments: number; balance: number } {
-  const charges = items.filter((i) => i.type === "charge").reduce((s, i) => s + parseFloat(i.amount), 0);
-  const payments = items
-    .filter((i) => i.type !== "charge")
-    .reduce((s, i) => s + parseFloat(i.amount), 0);
-  return { charges, payments, balance: (charges - payments) || 0 };
+  let chargesCents = 0, paymentsCents = 0;
+  for (const item of items) {
+    if (item.type === "charge") chargesCents += toCents(item.amount);
+    else paymentsCents += toCents(item.amount);
+  }
+  return {
+    charges: toDollars(chargesCents),
+    payments: toDollars(paymentsCents),
+    balance: toDollars(chargesCents - paymentsCents),
+  };
 }
 
 export type VisitStatus = "Scheduled" | "Completed" | "Billed" | "Paid";

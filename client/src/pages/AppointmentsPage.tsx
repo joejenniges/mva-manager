@@ -96,15 +96,15 @@ export default function AppointmentsPage() {
       .finally(() => setLoading(false));
   }, [page, limit, search, dateFrom, dateTo, patientId, organizationId, sort, order, refreshKey]);
 
+  // WHY: Integer cents arithmetic to avoid IEEE 754 float drift entirely.
   function costSummary(items: { amount: string; type: string }[]) {
-    let charges = 0, credits = 0;
+    let chargesCents = 0, creditsCents = 0;
     for (const item of items) {
-      const amt = parseFloat(item.amount);
-      if (item.type === "charge") charges += amt;
-      else credits += amt;
+      const cents = Math.round(parseFloat(item.amount) * 100);
+      if (item.type === "charge") chargesCents += cents;
+      else creditsCents += cents;
     }
-    const balance = (charges - credits) || 0;
-    return { charges, balance };
+    return { charges: chargesCents / 100, balance: (chargesCents - creditsCents) / 100 };
   }
 
   function handleSort(field: SortField) {
@@ -117,7 +117,8 @@ export default function AppointmentsPage() {
     setPage(1);
   }
 
-  const totalBalance = (totalCharges - totalCredits) || 0;
+  // WHY: Server returns floats from SQL sum(); round to cents before subtracting.
+  const totalBalance = (Math.round(totalCharges * 100) - Math.round(totalCredits * 100)) / 100;
   const hasFilters = search || dateFrom || dateTo || patientId || organizationId;
   const totalPages = Math.ceil(total / limit);
 
