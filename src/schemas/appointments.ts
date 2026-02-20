@@ -24,6 +24,7 @@ export const AppointmentListQuery = z.object({
   organizationId: z.string().uuid().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
+  documentFilter: z.enum(["all", "none", "any"]).default("all"),
   sort: z.enum(["datetime", "title", "patient", "organization"]).default("datetime"),
   order: z.enum(["asc", "desc"]).default("desc"),
 });

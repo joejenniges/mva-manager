@@ -1,8 +1,8 @@
-import { eq, ilike, asc, desc, sql, and, gte, lte } from "drizzle-orm";
+import { eq, ilike, asc, desc, sql, and, gte, lte, exists, notExists } from "drizzle-orm";
 import { getDb } from "../db/connection.js";
 import {
   appointments, appointmentProviders, appointmentActivities, appointmentCostItems,
-  persons, organizations, locations,
+  persons, organizations, locations, documentAppointments,
 } from "../db/schema/index.js";
 import { AppError } from "../middleware/errors.js";
 import { ERROR_CODES } from "../constants.js";
@@ -17,6 +17,7 @@ interface AppointmentListParams {
   organizationId?: string;
   dateFrom?: string;
   dateTo?: string;
+  documentFilter?: "all" | "none" | "any";
   sort?: "datetime" | "title" | "patient" | "organization";
   order?: "asc" | "desc";
 }
@@ -31,7 +32,7 @@ const DB_SORT_COLUMNS: Record<string, any> = {
 
 export async function listAppointments(eventId: string, params: AppointmentListParams) {
   const db = getDb();
-  const { page, limit, search, patientId, organizationId, dateFrom, dateTo, sort = "datetime", order = "desc" } = params;
+  const { page, limit, search, patientId, organizationId, dateFrom, dateTo, documentFilter = "all", sort = "datetime", order = "desc" } = params;
   const offset = (page - 1) * limit;
 
   const conditions = [eq(appointments.eventId, eventId)];
@@ -45,6 +46,17 @@ export async function listAppointments(eventId: string, params: AppointmentListP
   if (organizationId) conditions.push(eq(appointments.organizationId, organizationId));
   if (dateFrom) conditions.push(gte(appointments.datetime, new Date(dateFrom)));
   if (dateTo) conditions.push(lte(appointments.datetime, new Date(dateTo)));
+  if (documentFilter === "none") {
+    conditions.push(notExists(
+      db.select({ x: sql`1` }).from(documentAppointments)
+        .where(eq(documentAppointments.appointmentId, appointments.id))
+    ));
+  } else if (documentFilter === "any") {
+    conditions.push(exists(
+      db.select({ x: sql`1` }).from(documentAppointments)
+        .where(eq(documentAppointments.appointmentId, appointments.id))
+    ));
+  }
 
   const where = and(...conditions);
   const dbSortCol = DB_SORT_COLUMNS[sort];

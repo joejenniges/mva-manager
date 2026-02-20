@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import type { PaginatedResponse } from "../types";
@@ -27,30 +27,99 @@ interface FilterOption {
 }
 
 type SortField = "datetime" | "title" | "patient" | "organization";
+type DocFilter = "all" | "none" | "any";
+
+const STORAGE_KEY = "appointments-filters";
+const PERSIST_KEY = "appointments-persist-filters";
+
+interface SavedFilters {
+  search: string;
+  dateFrom: string;
+  dateTo: string;
+  patientId: string;
+  organizationId: string;
+  documentFilter: DocFilter;
+  sort: SortField;
+  order: "asc" | "desc";
+  page: number;
+  limit: number;
+}
+
+const DEFAULTS: SavedFilters = {
+  search: "",
+  dateFrom: "",
+  dateTo: "",
+  patientId: "",
+  organizationId: "",
+  documentFilter: "all",
+  sort: "datetime",
+  order: "asc",
+  page: 1,
+  limit: 25,
+};
+
+function loadPersist(): boolean {
+  return sessionStorage.getItem(PERSIST_KEY) === "true";
+}
+
+function loadFilters(): SavedFilters {
+  if (!loadPersist()) return { ...DEFAULTS };
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return { ...DEFAULTS };
+    return { ...DEFAULTS, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULTS };
+  }
+}
+
+function saveFilters(filters: SavedFilters) {
+  if (loadPersist()) {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+  }
+}
 
 export default function AppointmentsPage() {
   const navigate = useNavigate();
+  const initial = loadFilters();
   const [data, setData] = useState<AppointmentRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [patientId, setPatientId] = useState("");
-  const [organizationId, setOrganizationId] = useState("");
-  const [sort, setSort] = useState<SortField>("datetime");
-  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(initial.page);
+  const [search, setSearch] = useState(initial.search);
+  const [dateFrom, setDateFrom] = useState(initial.dateFrom);
+  const [dateTo, setDateTo] = useState(initial.dateTo);
+  const [patientId, setPatientId] = useState(initial.patientId);
+  const [organizationId, setOrganizationId] = useState(initial.organizationId);
+  const [documentFilter, setDocumentFilter] = useState<DocFilter>(initial.documentFilter);
+  const [sort, setSort] = useState<SortField>(initial.sort);
+  const [order, setOrder] = useState<"asc" | "desc">(initial.order);
   const [loading, setLoading] = useState(true);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [totalCharges, setTotalCharges] = useState(0);
   const [totalCredits, setTotalCredits] = useState(0);
+  const [persist, setPersist] = useState(loadPersist);
+  const [limit, setLimit] = useState(initial.limit);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const tableNav = useTableNavigation({
     itemCount: data.length,
     onSelect: (i) => navigate(`/appointments/${data[i].id}`),
   });
+
+  const clearFilters = useCallback(() => {
+    setSearch(DEFAULTS.search);
+    setDateFrom(DEFAULTS.dateFrom);
+    setDateTo(DEFAULTS.dateTo);
+    setPatientId(DEFAULTS.patientId);
+    setOrganizationId(DEFAULTS.organizationId);
+    setDocumentFilter(DEFAULTS.documentFilter);
+    setSort(DEFAULTS.sort);
+    setOrder(DEFAULTS.order);
+    setPage(DEFAULTS.page);
+    setLimit(DEFAULTS.limit);
+    sessionStorage.removeItem(STORAGE_KEY);
+  }, []);
 
   useHotkeys({
     s: () => searchRef.current?.focus(),
@@ -60,6 +129,7 @@ export default function AppointmentsPage() {
     },
     n: () => navigate("/appointments/new"),
     f: () => setShowTemplateModal(true),
+    c: clearFilters,
     ",": () => setPage((p) => Math.max(1, p - 1)),
     ".": () => setPage((p) => Math.min(p + 1, Math.ceil(total / limit) || 1)),
     ...tableNav.hotkeys,
@@ -68,8 +138,6 @@ export default function AppointmentsPage() {
   // Filter dropdown options
   const [patients, setPatients] = useState<FilterOption[]>([]);
   const [orgs, setOrgs] = useState<FilterOption[]>([]);
-
-  const [limit, setLimit] = useState(25);
 
   // Fetch filter options once
   useEffect(() => {
@@ -81,6 +149,24 @@ export default function AppointmentsPage() {
       .catch(() => {});
   }, []);
 
+  // Save filters to sessionStorage when they change
+  useEffect(() => {
+    saveFilters({ search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, page, limit });
+  }, [search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, page, limit]);
+
+  // Toggle persist
+  function handlePersistToggle() {
+    const next = !persist;
+    setPersist(next);
+    if (next) {
+      sessionStorage.setItem(PERSIST_KEY, "true");
+      saveFilters({ search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, page, limit });
+    } else {
+      sessionStorage.removeItem(PERSIST_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }
+
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(limit), sort, order });
@@ -89,12 +175,13 @@ export default function AppointmentsPage() {
     if (dateTo) params.set("dateTo", dateTo);
     if (patientId) params.set("patientId", patientId);
     if (organizationId) params.set("organizationId", organizationId);
+    if (documentFilter !== "all") params.set("documentFilter", documentFilter);
 
     api<PaginatedResponse<AppointmentRow> & { totalCharges: number; totalCredits: number }>(`/api/v1/appointments?${params}`)
       .then((res) => { setData(res.data); setTotal(res.total); setTotalCharges(res.totalCharges); setTotalCredits(res.totalCredits); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page, limit, search, dateFrom, dateTo, patientId, organizationId, sort, order, refreshKey]);
+  }, [page, limit, search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, refreshKey]);
 
   // WHY: Integer cents arithmetic to avoid IEEE 754 float drift entirely.
   function costSummary(items: { amount: string; type: string }[]) {
@@ -119,7 +206,7 @@ export default function AppointmentsPage() {
 
   // WHY: Server returns floats from SQL sum(); round to cents before subtracting.
   const totalBalance = (Math.round(totalCharges * 100) - Math.round(totalCredits * 100)) / 100;
-  const hasFilters = search || dateFrom || dateTo || patientId || organizationId;
+  const hasFilters = search || dateFrom || dateTo || patientId || organizationId || documentFilter !== "all";
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -144,7 +231,7 @@ export default function AppointmentsPage() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
           ref={searchRef}
           type="text"
@@ -173,6 +260,15 @@ export default function AppointmentsPage() {
             <option key={o.id} value={o.id}>{o.name}</option>
           ))}
         </select>
+        <select
+          value={documentFilter}
+          onChange={(e) => { setDocumentFilter(e.target.value as DocFilter); setPage(1); }}
+          className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+        >
+          <option value="all">All Documents</option>
+          <option value="none">No Documents</option>
+          <option value="any">Has Documents</option>
+        </select>
         <input
           type="date"
           value={dateFrom}
@@ -187,6 +283,30 @@ export default function AppointmentsPage() {
           onBlur={(e) => setDateTo(normalizeDateValue(e.target.value))}
           className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
         />
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="rounded-md border border-gray-700 px-3 py-1.5 text-sm text-gray-400 hover:border-gray-600 hover:text-gray-200"
+          >
+            Clear
+            <kbd className="relative -top-px ml-1.5 hidden rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400 md:inline">C</kbd>
+          </button>
+        )}
+        {/* WHY: Persist toggle uses sessionStorage, not localStorage, so it resets
+            when the browser closes. Filters are session-scoped, not permanent. */}
+        <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs text-gray-500">
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={persist}
+              onChange={handlePersistToggle}
+              className="sr-only"
+            />
+            <div className={`h-5 w-9 rounded-full transition-colors ${persist ? "bg-blue-600" : "bg-gray-700"}`} />
+            <div className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${persist ? "translate-x-4" : ""}`} />
+          </div>
+          Keep filters
+        </label>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-700">
