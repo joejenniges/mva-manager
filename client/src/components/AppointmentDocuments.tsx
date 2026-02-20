@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { api, getStoredToken, getStoredEventId } from "../api";
 import TagBadge from "./TagBadge";
+import Spinner from "./Spinner";
 import FileDropzone from "./FileDropzone";
 import type { FileDropzoneHandle } from "./FileDropzone";
 import DocumentViewer from "./DocumentViewer";
@@ -252,7 +253,7 @@ const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(funct
               </div>
               <div className="space-y-1">
                 {group.docs.map((doc: any) => (
-                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
+                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} docTypes={docTypes} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
                 ))}
               </div>
             </div>
@@ -262,7 +263,7 @@ const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(funct
               <div className="mb-2 text-xs uppercase text-gray-500">Other</div>
               <div className="space-y-1">
                 {ungrouped.map((doc: any) => (
-                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
+                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} docTypes={docTypes} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
                 ))}
               </div>
             </div>
@@ -300,43 +301,60 @@ export default AppointmentDocuments;
 // to AppointmentDocuments' state (onView, onUpdate). Includes rename + unlink actions.
 // WHY unlink instead of delete: Documents can now be shared across appointments.
 // Removing from one appointment shouldn't delete the file -- just removes the junction row.
-function DocumentRow({ doc, appointmentId, onView, onUpdate }: { doc: any; appointmentId: string; onView: () => void; onUpdate: () => void }) {
+function DocumentRow({ doc, appointmentId, docTypes, onView, onUpdate }: { doc: any; appointmentId: string; docTypes: DocType[]; onView: () => void; onUpdate: () => void }) {
   const { toast } = useToast();
-  const [renaming, setRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState("");
-  const [removing, setRemoving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editTypeId, setEditTypeId] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const [removeState, setRemoveState] = useState<"idle" | "confirm" | "removing">("idle");
 
-  function startRename() {
-    setRenameValue(doc.title || doc.originalFilename);
-    setRenaming(true);
+  function startEdit() {
+    setEditTitle(doc.title || doc.originalFilename);
+    setEditTypeId(doc.documentType?.id || "");
+    setEditing(true);
   }
 
-  async function saveRename() {
-    const trimmed = renameValue.trim();
-    if (!trimmed || trimmed === (doc.title || doc.originalFilename)) {
-      setRenaming(false);
+  async function saveEdit() {
+    if (saving) return;
+    const trimmedTitle = editTitle.trim();
+    const titleChanged = trimmedTitle && trimmedTitle !== (doc.title || doc.originalFilename);
+    const typeChanged = editTypeId !== (doc.documentType?.id || "");
+
+    if (!titleChanged && !typeChanged) {
+      setEditing(false);
       return;
     }
+
+    setSaving(true);
     try {
-      await api(`/api/v1/documents/${doc.id}`, { method: "PATCH", body: { title: trimmed } });
-      toast("Document renamed", "success");
+      const body: Record<string, any> = {};
+      if (titleChanged) body.title = trimmedTitle;
+      // WHY: Changing document type should NOT auto-rename from template.
+      // Only sends documentTypeId - title stays as-is unless user explicitly changed it.
+      if (typeChanged) body.documentTypeId = editTypeId || null;
+      await api(`/api/v1/documents/${doc.id}`, { method: "PATCH", body });
+      toast("Document updated", "success");
       onUpdate();
     } catch {
-      toast("Failed to rename document", "error");
+      toast("Failed to update document", "error");
     }
-    setRenaming(false);
+    setSaving(false);
+    setEditing(false);
   }
 
   async function handleRemove() {
-    if (!removing) { setRemoving(true); return; }
+    if (removeState === "idle") { setRemoveState("confirm"); return; }
+    if (removeState !== "confirm") return;
+    setRemoveState("removing");
     try {
       await api(`/api/v1/documents/${doc.id}/appointments/${appointmentId}`, { method: "DELETE" });
       toast("Document removed from appointment", "success");
       onUpdate();
     } catch {
       toast("Failed to remove document", "error");
+      setRemoveState("idle");
     }
-    setRemoving(false);
   }
 
   const createdAt = doc.createdAt ? new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
@@ -349,41 +367,68 @@ function DocumentRow({ doc, appointmentId, onView, onUpdate }: { doc: any; appoi
         style={{ backgroundColor: doc.documentType?.color || "#6b7280" }}
       />
 
-      {renaming ? (
-        <input
-          autoFocus
-          value={renameValue}
-          onChange={(e) => setRenameValue(e.target.value)}
-          onBlur={saveRename}
-          onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenaming(false); }}
-          className="flex-1 rounded border border-gray-600 bg-gray-900 px-2 py-0.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
-        />
+      {editing ? (
+        <div className="flex flex-1 items-center gap-2">
+          <select
+            value={editTypeId}
+            onChange={(e) => setEditTypeId(e.target.value)}
+            className="rounded border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+          >
+            <option value="">No type</option>
+            {docTypes.map((dt) => (
+              <option key={dt.id} value={dt.id}>{dt.title}</option>
+            ))}
+          </select>
+          <input
+            autoFocus
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditing(false); }}
+            className="flex-1 rounded border border-gray-600 bg-gray-900 px-2 py-0.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+          />
+          <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-400 hover:text-blue-300">
+            {saving ? "..." : "Save"}
+          </button>
+          <button onClick={() => setEditing(false)} className="text-xs text-gray-500 hover:text-gray-300">
+            Cancel
+          </button>
+        </div>
       ) : (
         <button onClick={onView} className="flex-1 text-left text-sm text-gray-300 hover:text-gray-100">
           {doc.title || doc.originalFilename}
         </button>
       )}
 
-      {createdAt && <span className="text-xs text-gray-600">{createdAt}</span>}
+      {!editing && createdAt && <span className="text-xs text-gray-600">{createdAt}</span>}
 
       {/* Actions - visible on hover */}
+      {!editing && (
       <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button onClick={startRename} className="rounded p-1 text-gray-500 hover:text-gray-300" title="Rename">
+        <button onClick={startEdit} className="rounded p-1 text-gray-500 hover:text-gray-300" title="Edit">
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
         </button>
-        <button
-          onClick={handleRemove}
-          className={`rounded p-1 ${removing ? "text-red-400" : "text-gray-500 hover:text-red-400"}`}
-          title={removing ? "Click again to confirm" : "Remove from appointment"}
-          onBlur={() => setRemoving(false)}
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        {removeState === "removing" ? (
+          <div className="p-1"><Spinner size="sm" /></div>
+        ) : (
+          <button
+            onClick={handleRemove}
+            onBlur={() => { if (removeState === "confirm") setRemoveState("idle"); }}
+            className={`rounded p-1 ${removeState === "confirm" ? "font-bold text-red-400" : "text-gray-500 hover:text-red-400"}`}
+            title={removeState === "confirm" ? "Click again to confirm" : "Remove from appointment"}
+          >
+            {removeState === "confirm" ? (
+              <span className="flex h-3.5 w-3.5 items-center justify-center text-xs">?</span>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+          </button>
+        )}
       </div>
+      )}
     </div>
   );
 }

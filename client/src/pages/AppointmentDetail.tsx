@@ -7,6 +7,7 @@ import StatusBadge from "../components/StatusBadge";
 import BillingSummaryStrip from "../components/BillingSummaryStrip";
 import CostTable from "../components/CostTable";
 import AddCostItemForm from "../components/AddCostItemForm";
+import CopyCostsModal from "../components/CopyCostsModal";
 import CollapsibleMap from "../components/CollapsibleMap";
 import AppointmentDocuments from "../components/AppointmentDocuments";
 import DocumentViewer from "../components/DocumentViewer";
@@ -52,6 +53,7 @@ export default function AppointmentDetail() {
   const [insuranceDropdownOpen, setInsuranceDropdownOpen] = useState(false);
   const [insuranceHighlight, setInsuranceHighlight] = useState(-1);
   const [viewingDoc, setViewingDoc] = useState<any>(null);
+  const [copyCostsOpen, setCopyCostsOpen] = useState(false);
 
   useHotkeys({
     Escape: () => {
@@ -308,6 +310,14 @@ export default function AppointmentDetail() {
           + Record Payment
           <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">P</kbd>
         </button>
+        {appt.organization && (
+          <button
+            onClick={() => setCopyCostsOpen(true)}
+            className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+          >
+            Copy Charges
+          </button>
+        )}
         <button
           onClick={() => docsRef.current?.scrollIntoView()}
           className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
@@ -329,6 +339,16 @@ export default function AppointmentDetail() {
 
       {/* [G] Add item form */}
       <AddCostItemForm ref={costFormRef} appointmentId={appt.id} onAdded={loadAppt} />
+
+      {/* Copy costs modal */}
+      {copyCostsOpen && appt.organization && (
+        <CopyCostsModal
+          appointmentId={appt.id}
+          organizationId={appt.organization.id}
+          onCopied={loadAppt}
+          onClose={() => setCopyCostsOpen(false)}
+        />
+      )}
 
       {/* [H] Documents */}
       <AppointmentDocuments ref={docsRef} appointmentId={appt.id} appointment={appt} onViewDocument={setViewingDoc} />

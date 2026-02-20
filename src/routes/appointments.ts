@@ -2,7 +2,7 @@ import { Router } from "express";
 import { validate } from "../middleware/validation.js";
 import { requireAuth } from "../middleware/auth.js";
 import { UuidParam } from "../schemas/common.js";
-import { CreateAppointmentSchema, UpdateAppointmentSchema, AppointmentListQuery, CreateCostItemSchema, UpdateCostItemSchema } from "../schemas/appointments.js";
+import { CreateAppointmentSchema, UpdateAppointmentSchema, AppointmentListQuery, CreateCostItemSchema, UpdateCostItemSchema, BulkCreateCostItemsSchema } from "../schemas/appointments.js";
 import * as service from "../services/appointments.js";
 
 const router = Router();
@@ -46,6 +46,12 @@ router.delete("/:id", validate(UuidParam, "params"), async (req, res, next) => {
 router.post("/:id/cost-items", validate(UuidParam, "params"), validate(CreateCostItemSchema), async (req, res, next) => {
   try {
     res.status(201).json(await service.createCostItem(res.locals.eventId, res.locals.params.id, req.body));
+  } catch (err) { next(err); }
+});
+
+router.post("/:id/cost-items/bulk", validate(UuidParam, "params"), validate(BulkCreateCostItemsSchema), async (req, res, next) => {
+  try {
+    res.status(201).json(await service.bulkCreateCostItems(res.locals.eventId, res.locals.params.id, req.body.items));
   } catch (err) { next(err); }
 });
 

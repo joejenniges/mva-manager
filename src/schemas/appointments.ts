@@ -36,3 +36,7 @@ export const CreateCostItemSchema = z.object({
 });
 
 export const UpdateCostItemSchema = CreateCostItemSchema.partial();
+
+export const BulkCreateCostItemsSchema = z.object({
+  items: z.array(CreateCostItemSchema).min(1).max(100),
+});

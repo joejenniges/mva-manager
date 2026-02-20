@@ -222,6 +222,23 @@ export async function createCostItem(eventId: string, appointmentId: string, dat
   return result[0];
 }
 
+export async function bulkCreateCostItems(eventId: string, appointmentId: string, items: {
+  description?: string | null;
+  billingCode?: string | null;
+  amount: string;
+  type: string;
+}[]) {
+  const db = getDb();
+  const appointment = await db.select({ id: appointments.id }).from(appointments)
+    .where(and(eq(appointments.id, appointmentId), eq(appointments.eventId, eventId))).limit(1);
+  if (appointment.length === 0) throw new AppError(404, ERROR_CODES.NOT_FOUND, "Appointment not found");
+
+  const result = await db.insert(appointmentCostItems).values(
+    items.map((item) => ({ appointmentId, ...item, type: item.type as any })),
+  ).returning();
+  return result;
+}
+
 export async function updateCostItem(id: string, data: Partial<{
   description: string | null;
   billingCode: string | null;

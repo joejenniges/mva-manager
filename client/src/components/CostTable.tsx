@@ -1,3 +1,6 @@
+import { useState } from "react";
+import Spinner from "./Spinner";
+
 interface CostItem {
   id: string;
   description: string | null;
@@ -24,7 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function CostTable({ items, onDelete }: {
   items: CostItem[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }) {
   if (items.length === 0) return null;
 
@@ -42,18 +45,52 @@ export default function CostTable({ items, onDelete }: {
         </thead>
         <tbody className="bg-gray-900">
           {items.map((item) => (
-            <tr key={item.id} className="border-t border-gray-800">
-              <td className={`px-3 py-2 ${TYPE_COLORS[item.type] || "text-gray-300"}`}>{TYPE_LABELS[item.type]}</td>
-              <td className="px-3 py-2 text-gray-300">{item.description || "-"}</td>
-              <td className="px-3 py-2 font-mono text-xs text-gray-400">{item.billingCode || "-"}</td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-100">${parseFloat(item.amount).toFixed(2)}</td>
-              <td className="px-3 py-2">
-                <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-300">x</button>
-              </td>
-            </tr>
+            <CostRow key={item.id} item={item} onDelete={onDelete} />
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function CostRow({ item, onDelete }: { item: CostItem; onDelete: (id: string) => Promise<void> }) {
+  const [state, setState] = useState<"idle" | "confirm" | "deleting">("idle");
+
+  async function handleClick() {
+    if (state === "idle") {
+      setState("confirm");
+      return;
+    }
+    if (state === "confirm") {
+      setState("deleting");
+      try {
+        await onDelete(item.id);
+      } catch {
+        setState("idle");
+      }
+    }
+  }
+
+  return (
+    <tr className="border-t border-gray-800">
+      <td className={`px-3 py-2 ${TYPE_COLORS[item.type] || "text-gray-300"}`}>{TYPE_LABELS[item.type]}</td>
+      <td className="px-3 py-2 text-gray-300">{item.description || "-"}</td>
+      <td className="px-3 py-2 font-mono text-xs text-gray-400">{item.billingCode || "-"}</td>
+      <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-100">${parseFloat(item.amount).toFixed(2)}</td>
+      <td className="px-3 py-2">
+        {state === "deleting" ? (
+          <Spinner size="sm" />
+        ) : (
+          <button
+            onClick={handleClick}
+            onBlur={() => { if (state === "confirm") setState("idle"); }}
+            className={state === "confirm" ? "font-bold text-red-400" : "text-gray-500 hover:text-red-400"}
+            title={state === "confirm" ? "Click again to confirm" : "Delete"}
+          >
+            {state === "confirm" ? "?" : "x"}
+          </button>
+        )}
+      </td>
+    </tr>
   );
 }
