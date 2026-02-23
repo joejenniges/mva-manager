@@ -38,10 +38,18 @@ export default function AppointmentForm() {
     },
   });
 
+  // WHY: datetime-local inputs use local time, not UTC. toISOString() returns
+  // UTC which causes the displayed time to shift by the timezone offset.
+  // Instead, format using local date/time components.
+  function toLocalDatetimeString(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   // WHY: Calendar click-to-create passes ?datetime=ISO to pre-fill the date
   const initialDatetime = searchParams.get("datetime")
-    ? new Date(searchParams.get("datetime")!).toISOString().slice(0, 16)
-    : new Date().toISOString().slice(0, 16);
+    ? toLocalDatetimeString(new Date(searchParams.get("datetime")!))
+    : toLocalDatetimeString(new Date());
 
   const [form, setForm] = useState<AppointmentData>({
     title: "",
@@ -63,7 +71,7 @@ export default function AppointmentForm() {
       api<any>(`/api/v1/appointments/${id}`).then((appt) => {
         setForm({
           title: appt.title || "",
-          datetime: appt.datetime ? new Date(appt.datetime).toISOString().slice(0, 16) : "",
+          datetime: appt.datetime ? toLocalDatetimeString(new Date(appt.datetime)) : "",
           notes: appt.notes || "",
           organizationId: appt.organizationId,
           locationId: appt.locationId,

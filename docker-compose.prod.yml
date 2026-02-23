@@ -5,6 +5,7 @@ services:
       args:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         VITE_COMMIT_HASH: ${COMMIT_HASH}
+        VITE_MILEAGE_RATE: ${MILEAGE_RATE:-0.205}
     container_name: mva-app
     ports:
       - "127.0.0.1:3100:3100"

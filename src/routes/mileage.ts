@@ -4,10 +4,11 @@ import { validate } from "../middleware/validation.js";
 import { z } from "zod";
 import { getDb } from "../db/connection.js";
 import { appointments, persons } from "../db/schema/index.js";
-import { eq, and, sql, isNotNull } from "drizzle-orm";
+import { eq, and, sql, isNotNull, lte } from "drizzle-orm";
 
 const MileageQuery = z.object({
   patientId: z.string().uuid().optional(),
+  completedOnly: z.enum(["true", "false"]).optional(),
 });
 
 const router = Router();
@@ -16,7 +17,7 @@ router.use(requireAuth);
 router.get("/", validate(MileageQuery, "query"), async (req, res, next) => {
   try {
     const eventId = res.locals.eventId as string;
-    const { patientId } = res.locals.query as z.infer<typeof MileageQuery>;
+    const { patientId, completedOnly } = res.locals.query as z.infer<typeof MileageQuery>;
     const db = getDb();
 
     const conditions = [
@@ -24,6 +25,7 @@ router.get("/", validate(MileageQuery, "query"), async (req, res, next) => {
       isNotNull(appointments.drivingDistanceMiles),
     ];
     if (patientId) conditions.push(eq(appointments.patientPersonId, patientId));
+    if (completedOnly === "true") conditions.push(lte(appointments.datetime, new Date()));
 
     // Per-patient breakdown
     const rows = await db
