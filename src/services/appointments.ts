@@ -18,6 +18,7 @@ interface AppointmentListParams {
   dateFrom?: string;
   dateTo?: string;
   documentFilter?: "all" | "none" | "any";
+  balanceFilter?: "all" | "no_charges" | "outstanding" | "paid";
   sort?: "datetime" | "title" | "patient" | "organization";
   order?: "asc" | "desc";
 }
@@ -32,7 +33,7 @@ const DB_SORT_COLUMNS: Record<string, any> = {
 
 export async function listAppointments(eventId: string, params: AppointmentListParams) {
   const db = getDb();
-  const { page, limit, search, patientId, organizationId, dateFrom, dateTo, documentFilter = "all", sort = "datetime", order = "desc" } = params;
+  const { page, limit, search, patientId, organizationId, dateFrom, dateTo, documentFilter = "all", balanceFilter = "all", sort = "datetime", order = "desc" } = params;
   const offset = (page - 1) * limit;
 
   const conditions = [eq(appointments.eventId, eventId)];
@@ -56,6 +57,30 @@ export async function listAppointments(eventId: string, params: AppointmentListP
       db.select({ x: sql`1` }).from(documentAppointments)
         .where(eq(documentAppointments.appointmentId, appointments.id))
     ));
+  }
+
+  // WHY: Balance is derived from cost items, not stored. We compute it in SQL
+  // via correlated subqueries so filtering happens before pagination.
+  // WHY raw SQL strings: Drizzle's sql`` template resolves column references
+  // against the outer query's table aliases, so ${appointmentCostItems.type}
+  // becomes "appointments"."type" instead of "appointment_cost_items"."type".
+  const chargesSub = sql`(
+    select coalesce(sum(case when ci.type = 'charge' then ci.amount::numeric else 0 end), 0)
+    from appointment_cost_items ci where ci.appointment_id = ${appointments.id}
+  )`;
+  const balanceSub = sql`(
+    select coalesce(sum(case when ci.type = 'charge' then ci.amount::numeric else -ci.amount::numeric end), 0)
+    from appointment_cost_items ci where ci.appointment_id = ${appointments.id}
+  )`;
+
+  if (balanceFilter === "no_charges") {
+    conditions.push(sql`${chargesSub} = 0`);
+  } else if (balanceFilter === "outstanding") {
+    conditions.push(sql`${chargesSub} > 0`);
+    conditions.push(sql`${balanceSub} > 0`);
+  } else if (balanceFilter === "paid") {
+    conditions.push(sql`${chargesSub} > 0`);
+    conditions.push(sql`${balanceSub} <= 0`);
   }
 
   const where = and(...conditions);

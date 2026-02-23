@@ -28,6 +28,7 @@ interface FilterOption {
 
 type SortField = "datetime" | "title" | "patient" | "organization";
 type DocFilter = "all" | "none" | "any";
+type BalanceFilter = "all" | "no_charges" | "outstanding" | "paid";
 
 const STORAGE_KEY = "appointments-filters";
 const PERSIST_KEY = "appointments-persist-filters";
@@ -39,6 +40,7 @@ interface SavedFilters {
   patientId: string;
   organizationId: string;
   documentFilter: DocFilter;
+  balanceFilter: BalanceFilter;
   sort: SortField;
   order: "asc" | "desc";
   page: number;
@@ -52,6 +54,7 @@ const DEFAULTS: SavedFilters = {
   patientId: "",
   organizationId: "",
   documentFilter: "all",
+  balanceFilter: "all",
   sort: "datetime",
   order: "asc",
   page: 1,
@@ -91,6 +94,7 @@ export default function AppointmentsPage() {
   const [patientId, setPatientId] = useState(initial.patientId);
   const [organizationId, setOrganizationId] = useState(initial.organizationId);
   const [documentFilter, setDocumentFilter] = useState<DocFilter>(initial.documentFilter);
+  const [balanceFilter, setBalanceFilter] = useState<BalanceFilter>(initial.balanceFilter);
   const [sort, setSort] = useState<SortField>(initial.sort);
   const [order, setOrder] = useState<"asc" | "desc">(initial.order);
   const [loading, setLoading] = useState(true);
@@ -114,6 +118,7 @@ export default function AppointmentsPage() {
     setPatientId(DEFAULTS.patientId);
     setOrganizationId(DEFAULTS.organizationId);
     setDocumentFilter(DEFAULTS.documentFilter);
+    setBalanceFilter(DEFAULTS.balanceFilter);
     setSort(DEFAULTS.sort);
     setOrder(DEFAULTS.order);
     setPage(DEFAULTS.page);
@@ -151,8 +156,8 @@ export default function AppointmentsPage() {
 
   // Save filters to sessionStorage when they change
   useEffect(() => {
-    saveFilters({ search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, page, limit });
-  }, [search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, page, limit]);
+    saveFilters({ search, dateFrom, dateTo, patientId, organizationId, documentFilter, balanceFilter, sort, order, page, limit });
+  }, [search, dateFrom, dateTo, patientId, organizationId, documentFilter, balanceFilter, sort, order, page, limit]);
 
   // Toggle persist
   function handlePersistToggle() {
@@ -160,7 +165,7 @@ export default function AppointmentsPage() {
     setPersist(next);
     if (next) {
       sessionStorage.setItem(PERSIST_KEY, "true");
-      saveFilters({ search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, page, limit });
+      saveFilters({ search, dateFrom, dateTo, patientId, organizationId, documentFilter, balanceFilter, sort, order, page, limit });
     } else {
       sessionStorage.removeItem(PERSIST_KEY);
       sessionStorage.removeItem(STORAGE_KEY);
@@ -176,12 +181,13 @@ export default function AppointmentsPage() {
     if (patientId) params.set("patientId", patientId);
     if (organizationId) params.set("organizationId", organizationId);
     if (documentFilter !== "all") params.set("documentFilter", documentFilter);
+    if (balanceFilter !== "all") params.set("balanceFilter", balanceFilter);
 
     api<PaginatedResponse<AppointmentRow> & { totalCharges: number; totalCredits: number }>(`/api/v1/appointments?${params}`)
       .then((res) => { setData(res.data); setTotal(res.total); setTotalCharges(res.totalCharges); setTotalCredits(res.totalCredits); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page, limit, search, dateFrom, dateTo, patientId, organizationId, documentFilter, sort, order, refreshKey]);
+  }, [page, limit, search, dateFrom, dateTo, patientId, organizationId, documentFilter, balanceFilter, sort, order, refreshKey]);
 
   // WHY: Integer cents arithmetic to avoid IEEE 754 float drift entirely.
   function costSummary(items: { amount: string; type: string }[]) {
@@ -206,7 +212,7 @@ export default function AppointmentsPage() {
 
   // WHY: Server returns floats from SQL sum(); round to cents before subtracting.
   const totalBalance = (Math.round(totalCharges * 100) - Math.round(totalCredits * 100)) / 100;
-  const hasFilters = search || dateFrom || dateTo || patientId || organizationId || documentFilter !== "all";
+  const hasFilters = search || dateFrom || dateTo || patientId || organizationId || documentFilter !== "all" || balanceFilter !== "all";
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -268,6 +274,16 @@ export default function AppointmentsPage() {
           <option value="all">All Documents</option>
           <option value="none">No Documents</option>
           <option value="any">Has Documents</option>
+        </select>
+        <select
+          value={balanceFilter}
+          onChange={(e) => { setBalanceFilter(e.target.value as BalanceFilter); setPage(1); }}
+          className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+        >
+          <option value="all">All Balances</option>
+          <option value="no_charges">No Charges</option>
+          <option value="outstanding">Outstanding</option>
+          <option value="paid">Paid</option>
         </select>
         <input
           type="date"
