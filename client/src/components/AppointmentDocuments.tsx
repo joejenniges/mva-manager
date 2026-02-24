@@ -37,7 +37,7 @@ interface Props {
 
 const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(function AppointmentDocuments({ appointmentId, appointment, onViewDocument }, ref) {
   const { toast } = useToast();
-  const { canEdit, canDelete } = usePermissions();
+  const { canEdit } = usePermissions();
   const editable = canEdit("documents");
   const dropzoneRef = useRef<FileDropzoneHandle>(null);
   const [docs, setDocs] = useState<any[]>([]);
