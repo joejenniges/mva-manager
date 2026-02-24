@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth";
+import { usePermissions } from "../permissions";
 import EventSelector from "./EventSelector";
 
 interface NavItem { to: string; label: string; icon: string }
@@ -49,6 +50,7 @@ function NavItemLink({ item, onClick }: { item: NavItem; onClick?: () => void })
 
 export default function Sidebar({ onNavClick, onOpenCommandPalette }: { onNavClick?: () => void; onOpenCommandPalette?: () => void }) {
   const { user, logout } = useAuth();
+  const { isAdmin } = usePermissions();
   const location = useLocation();
   const typesChildActive = TYPES_PATHS.some((p) => location.pathname.startsWith(p));
   const [typesOpen, setTypesOpen] = useState(typesChildActive);
@@ -100,6 +102,15 @@ export default function Sidebar({ onNavClick, onOpenCommandPalette }: { onNavCli
           </div>
         )}
       </nav>
+
+      {isAdmin && (
+        <div className="border-t border-gray-800 px-2 py-2">
+          <NavItemLink
+            item={{ to: "/admin/users", label: "Users", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" }}
+            onClick={onNavClick}
+          />
+        </div>
+      )}
 
       <div className="border-t border-gray-800 px-4 py-3">
         <div className="mb-1 text-[10px] text-gray-600">{__COMMIT_HASH__}</div>

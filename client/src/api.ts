@@ -41,13 +41,27 @@ export function clearStoredEventId(): void {
   localStorage.removeItem(EVENT_KEY);
 }
 
+// WHY: Single source of truth for dev auth bypass. All fetch calls (api helper
+// and manual FormData uploads) use this instead of duplicating the check.
+export const DEV_AUTH_BYPASS = import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYPASS === "true";
+const DEV_USER_EMAIL = import.meta.env.VITE_DEV_USER_EMAIL || "user@example.com";
+
+/** Returns auth headers for the current session (dev bypass or Bearer token). */
+export function getAuthHeaders(): Record<string, string> {
+  if (DEV_AUTH_BYPASS) {
+    return { "X-Dev-User": DEV_USER_EMAIL };
+  }
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function api<T>(url: string, opts: FetchOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
 
   // WHY: Dev auth bypass sends X-Dev-User header instead of a real token.
   // The server's requireAuth middleware accepts this in development mode.
-  if (import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYPASS === "true") {
-    headers["X-Dev-User"] = "user@example.com";
+  if (DEV_AUTH_BYPASS) {
+    headers["X-Dev-User"] = DEV_USER_EMAIL;
   } else {
     const token = opts.token ?? getStoredToken();
     if (token) {

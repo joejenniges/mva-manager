@@ -13,6 +13,21 @@ export interface UserInfo {
   email: string;
   name: string;
   avatarUrl: string | null;
+  isAdmin: boolean;
+}
+
+// --- Permission Types ---
+
+export const ENTITY_TYPES = [
+  "appointments", "persons", "organizations", "locations",
+  "documents", "templates", "activities", "person_roles", "doc_types", "events",
+] as const;
+
+export type EntityType = typeof ENTITY_TYPES[number];
+
+export interface EventPermissions {
+  edit: EntityType[];
+  delete: EntityType[];
 }
 
 // --- API Types ---

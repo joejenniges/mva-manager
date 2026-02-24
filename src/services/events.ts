@@ -1,6 +1,6 @@
-import { eq, ilike, asc, desc, sql } from "drizzle-orm";
+import { eq, ilike, asc, desc, sql, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/connection.js";
-import { events } from "../db/schema/index.js";
+import { events, userEventAccess } from "../db/schema/index.js";
 import { AppError } from "../middleware/errors.js";
 import { ERROR_CODES } from "../constants.js";
 import { geocodeAddress } from "./geocoding.js";
@@ -11,12 +11,28 @@ interface EventListParams {
   search?: string;
 }
 
-export async function listEvents(params: EventListParams) {
+export async function listEvents(params: EventListParams, userId?: string) {
   const db = getDb();
   const { page, limit, search } = params;
   const offset = (page - 1) * limit;
 
-  const where = search ? ilike(events.title, `%${search}%`) : undefined;
+  const conditions = [];
+  if (search) conditions.push(ilike(events.title, `%${search}%`));
+
+  // Non-admins: filter to events they have access to
+  if (userId) {
+    const accessRows = await db
+      .select({ eventId: userEventAccess.eventId })
+      .from(userEventAccess)
+      .where(eq(userEventAccess.userId, userId));
+    const eventIds = accessRows.map((r) => r.eventId);
+    if (eventIds.length === 0) {
+      return { data: [], total: 0, page, limit, hasMore: false };
+    }
+    conditions.push(inArray(events.id, eventIds));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const [data, countResult] = await Promise.all([
     db.select().from(events).where(where).orderBy(desc(events.date)).offset(offset).limit(limit),

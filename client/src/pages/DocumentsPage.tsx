@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { api, getStoredToken, getStoredEventId } from "../api";
+import { api, getAuthHeaders, getStoredEventId } from "../api";
 import type { PaginatedResponse } from "../types";
 import TagBadge from "../components/TagBadge";
 import Spinner from "../components/Spinner";
 import EmptyState from "../components/EmptyState";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import FileDropzone from "../components/FileDropzone";
 import DocumentViewer from "../components/DocumentViewer";
 import useHotkeys from "../hooks/useHotkeys";
@@ -24,6 +25,7 @@ interface DocumentRow {
 
 export default function DocumentsPage() {
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const [data, setData] = useState<DocumentRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -72,15 +74,7 @@ export default function DocumentsPage() {
     formData.append("organizationIds", "[]");
 
     try {
-      const token = getStoredToken();
-      const headers: Record<string, string> = {};
-      // WHY: Same dev auth bypass pattern as AppointmentDocuments - fetch() can't use
-      // the api() helper because we need FormData (not JSON Content-Type)
-      if (import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYPASS === "true") {
-        headers["X-Dev-User"] = "user@example.com";
-      } else if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      const headers: Record<string, string> = { ...getAuthHeaders() };
       // WHY: Must manually inject X-Event-Id for event scoping on FormData uploads
       const eventId = getStoredEventId();
       if (eventId) headers["X-Event-Id"] = eventId;
@@ -116,10 +110,12 @@ export default function DocumentsPage() {
     <div>
       <h2 className="mb-4 text-2xl font-semibold text-gray-100">Documents</h2>
 
-      <div className="mb-4">
-        <FileDropzone onFileSelect={handleFileUpload} />
-        {uploading && <Spinner size="sm" className="mt-2" />}
-      </div>
+      {canEdit("documents") && (
+        <div className="mb-4">
+          <FileDropzone onFileSelect={handleFileUpload} />
+          {uploading && <Spinner size="sm" className="mt-2" />}
+        </div>
+      )}
 
       <div className="mb-4 flex gap-3">
         <input
@@ -150,7 +146,7 @@ export default function DocumentsPage() {
               <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Appointments</th>
               <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Size</th>
               <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Uploaded</th>
-              <th className="w-20"></th>
+              {canDelete("documents") && <th className="w-20"></th>}
             </tr>
           </thead>
           <tbody className="bg-gray-900">
@@ -193,9 +189,11 @@ export default function DocumentsPage() {
                 </td>
                 <td className="hidden px-4 py-3 text-gray-400 md:table-cell">{formatBytes(doc.fileSize)}</td>
                 <td className="hidden px-4 py-3 text-gray-400 md:table-cell">{new Date(doc.createdAt).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
-                  <button onClick={() => handleDelete(doc.id)} className="text-red-400 hover:text-red-300 text-xs">Delete</button>
-                </td>
+                {canDelete("documents") && (
+                  <td className="px-4 py-3">
+                    <button onClick={() => handleDelete(doc.id)} className="text-red-400 hover:text-red-300 text-xs">Delete</button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

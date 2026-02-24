@@ -12,6 +12,7 @@ import CollapsibleMap from "../components/CollapsibleMap";
 import AppointmentDocuments from "../components/AppointmentDocuments";
 import DocumentViewer from "../components/DocumentViewer";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import { getVisitStatus, calculateBalance } from "../utils/appointmentStatus";
 import useHotkeys from "../hooks/useHotkeys";
 import type { AddCostItemFormHandle } from "../components/AddCostItemForm";
@@ -47,6 +48,7 @@ export default function AppointmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const [appt, setAppt] = useState<AppointmentFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -222,19 +224,23 @@ export default function AppointmentDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link
-            to={`/appointments/${id}/edit`}
-            className="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700"
-          >
-            Edit
-            <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">E</kbd>
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-red-400 hover:bg-gray-700"
-          >
-            {deleting ? "Confirm?" : "Delete"}
-          </button>
+          {canEdit("appointments") && (
+            <Link
+              to={`/appointments/${id}/edit`}
+              className="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700"
+            >
+              Edit
+              <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">E</kbd>
+            </Link>
+          )}
+          {canDelete("appointments") && (
+            <button
+              onClick={handleDelete}
+              className="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-red-400 hover:bg-gray-700"
+            >
+              {deleting ? "Confirm?" : "Delete"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -298,50 +304,54 @@ export default function AppointmentDetail() {
       <BillingSummaryStrip items={appt.costItems} />
 
       {/* [E] Action buttons */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => costFormRef.current?.scrollIntoView("charge")}
-          className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
-        >
-          + Add Charge
-          <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">C</kbd>
-        </button>
-        <button
-          onClick={() => costFormRef.current?.scrollIntoView("payment")}
-          className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
-        >
-          + Record Payment
-          <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">P</kbd>
-        </button>
-        {appt.organization && (
+      {canEdit("appointments") && (
+        <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setCopyCostsOpen(true)}
+            onClick={() => costFormRef.current?.scrollIntoView("charge")}
             className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
           >
-            Copy Charges
+            + Add Charge
+            <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">C</kbd>
           </button>
-        )}
-        <button
-          onClick={() => docsRef.current?.scrollIntoView()}
-          className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
-        >
-          + Upload Document
-          <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">U</kbd>
-        </button>
-        <button
-          onClick={() => docsRef.current?.openPicker()}
-          className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
-        >
-          + Attach Document
-          <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">A</kbd>
-        </button>
-      </div>
+          <button
+            onClick={() => costFormRef.current?.scrollIntoView("payment")}
+            className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+          >
+            + Record Payment
+            <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">P</kbd>
+          </button>
+          {appt.organization && (
+            <button
+              onClick={() => setCopyCostsOpen(true)}
+              className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+            >
+              Copy Charges
+            </button>
+          )}
+          <button
+            onClick={() => docsRef.current?.scrollIntoView()}
+            className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+          >
+            + Upload Document
+            <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">U</kbd>
+          </button>
+          <button
+            onClick={() => docsRef.current?.openPicker()}
+            className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+          >
+            + Attach Document
+            <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">A</kbd>
+          </button>
+        </div>
+      )}
 
       {/* [F] Cost items table */}
-      <CostTable items={appt.costItems} onDelete={handleDeleteCostItem} />
+      <CostTable items={appt.costItems} onDelete={canDelete("appointments") ? handleDeleteCostItem : undefined} />
 
       {/* [G] Add item form */}
-      <AddCostItemForm ref={costFormRef} appointmentId={appt.id} onAdded={loadAppt} />
+      {canEdit("appointments") && (
+        <AddCostItemForm ref={costFormRef} appointmentId={appt.id} onAdded={loadAppt} />
+      )}
 
       {/* Copy costs modal */}
       {copyCostsOpen && appt.organization && (

@@ -2,7 +2,9 @@ import { Router } from "express";
 import { healthRouter } from "./health.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireEvent } from "../middleware/event.js";
+import { requireEventAccess } from "../middleware/authorize.js";
 import { createSession } from "../services/sessions.js";
+import { checkUserHasAnyAccess, getUserEventAccess } from "../services/userAccess.js";
 import { personRolesRouter } from "./personRoles.js";
 import { activitiesRouter } from "./activities.js";
 import { documentTypesRouter } from "./documentTypes.js";
@@ -17,6 +19,7 @@ import { calendarRouter } from "./calendar.js";
 import { geocodeRouter } from "./geocode.js";
 import { eventsRouter } from "./events.js";
 import { mileageRouter } from "./mileage.js";
+import { adminRouter } from "./admin.js";
 
 const router = Router();
 
@@ -25,6 +28,18 @@ router.use(healthRouter);
 // Auth endpoints
 router.post("/auth/session", requireAuth, async (req, res, next) => {
   try {
+    // WHY: Login gating. Must be admin OR have at least one event access row.
+    // This prevents random Google accounts from getting sessions.
+    if (!req.user!.isAdmin) {
+      const hasAccess = await checkUserHasAnyAccess(req.user!.id);
+      if (!hasAccess) {
+        res.status(403).json({
+          error: { code: "FORBIDDEN", message: "No access granted. Contact an admin." },
+        });
+        return;
+      }
+    }
+
     const session = await createSession(req.user!);
     res.json({
       token: session.token,
@@ -36,9 +51,23 @@ router.post("/auth/session", requireAuth, async (req, res, next) => {
   }
 });
 
-router.get("/me", requireAuth, (req, res) => {
-  res.json(req.user);
+router.get("/me", requireAuth, async (req, res) => {
+  const user = req.user!;
+  let permissions = null;
+
+  // If non-admin, look up permissions for the active event
+  if (!user.isAdmin) {
+    const eventId = req.headers["x-event-id"];
+    if (eventId && typeof eventId === "string") {
+      permissions = await getUserEventAccess(user.id, eventId);
+    }
+  }
+
+  res.json({ ...user, permissions });
 });
+
+// Admin user management
+router.use("/admin", adminRouter);
 
 // Event CRUD -- NOT scoped to an event (they ARE the events)
 router.use("/events", eventsRouter);
@@ -47,17 +76,17 @@ router.use("/events", eventsRouter);
 router.use("/distance", distanceRouter);
 router.use("/geocode", geocodeRouter);
 
-// Entity routes -- scoped to active event via requireEvent middleware
-router.use("/person-roles", requireEvent, personRolesRouter);
-router.use("/activities", requireEvent, activitiesRouter);
-router.use("/document-types", requireEvent, documentTypesRouter);
-router.use("/locations", requireEvent, locationsRouter);
-router.use("/persons", requireEvent, personsRouter);
-router.use("/organizations", requireEvent, organizationsRouter);
-router.use("/appointments", requireEvent, appointmentsRouter);
-router.use("/documents", requireEvent, documentsRouter);
-router.use("/appointment-templates", requireEvent, appointmentTemplatesRouter);
-router.use("/calendar", requireEvent, calendarRouter);
-router.use("/mileage", requireEvent, mileageRouter);
+// Entity routes -- scoped to active event via requireAuth + requireEvent + requireEventAccess
+router.use("/person-roles", requireAuth, requireEvent, requireEventAccess, personRolesRouter);
+router.use("/activities", requireAuth, requireEvent, requireEventAccess, activitiesRouter);
+router.use("/document-types", requireAuth, requireEvent, requireEventAccess, documentTypesRouter);
+router.use("/locations", requireAuth, requireEvent, requireEventAccess, locationsRouter);
+router.use("/persons", requireAuth, requireEvent, requireEventAccess, personsRouter);
+router.use("/organizations", requireAuth, requireEvent, requireEventAccess, organizationsRouter);
+router.use("/appointments", requireAuth, requireEvent, requireEventAccess, appointmentsRouter);
+router.use("/documents", requireAuth, requireEvent, requireEventAccess, documentsRouter);
+router.use("/appointment-templates", requireAuth, requireEvent, requireEventAccess, appointmentTemplatesRouter);
+router.use("/calendar", requireAuth, requireEvent, requireEventAccess, calendarRouter);
+router.use("/mileage", requireAuth, requireEvent, requireEventAccess, mileageRouter);
 
 export { router as apiRouter };

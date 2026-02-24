@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Navigate, Link } from "react-router-dom";
 import { api } from "../api";
 import { useNavigateAfterSave } from "../hooks/useNavigateAfterSave";
 import Spinner from "../components/Spinner";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import AddressAutocomplete from "../components/AddressAutocomplete";
 import useHotkeys from "../hooks/useHotkeys";
 
@@ -25,7 +26,10 @@ export default function LocationForm() {
   const navigate = useNavigate();
   const navigateTo = useNavigateAfterSave();
   const { toast } = useToast();
+  const { canEdit } = usePermissions();
   const isNew = !id;
+
+  if (!canEdit("locations")) return <Navigate to="/locations" replace />;
 
   useHotkeys({
     Escape: () => {

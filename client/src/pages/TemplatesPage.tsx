@@ -5,6 +5,7 @@ import TagBadge from "../components/TagBadge";
 import Spinner from "../components/Spinner";
 import EmptyState from "../components/EmptyState";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import useHotkeys from "../hooks/useHotkeys";
 import useTableNavigation from "../hooks/useTableNavigation";
 
@@ -19,6 +20,7 @@ interface AppointmentTemplate {
 export default function TemplatesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const { data, total, page, loading, error, search, setPage, remove } =
     useEntities<AppointmentTemplate>("/api/v1/appointment-templates");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -52,13 +54,15 @@ export default function TemplatesPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-100">Appointment Templates</h2>
-        <button
-          onClick={() => navigate("/templates/new")}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          New Template
-          <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
-        </button>
+        {canEdit("templates") && (
+          <button
+            onClick={() => navigate("/templates/new")}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            New Template
+            <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
+          </button>
+        )}
       </div>
 
       <div className="mb-4">
@@ -85,7 +89,7 @@ export default function TemplatesPage() {
               <th className="px-4 py-3 text-left font-medium">Organization</th>
               <th className="px-4 py-3 text-left font-medium">Location</th>
               <th className="px-4 py-3 text-left font-medium">Activities</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              {(canEdit("templates") || canDelete("templates")) && <th className="px-4 py-3 text-right font-medium">Actions</th>}
             </tr>
           </thead>
           <tbody className="bg-gray-900">
@@ -131,26 +135,32 @@ export default function TemplatesPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/templates/${template.id}`);
-                      }}
-                      className="mr-2 text-gray-400 hover:text-gray-200"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(template.id, template.name);
-                      }}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  {(canEdit("templates") || canDelete("templates")) && (
+                    <td className="px-4 py-3 text-right">
+                      {canEdit("templates") && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/templates/${template.id}`);
+                          }}
+                          className="mr-2 text-gray-400 hover:text-gray-200"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {canDelete("templates") && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(template.id, template.name);
+                          }}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))
             )}

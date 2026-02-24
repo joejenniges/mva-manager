@@ -25,7 +25,7 @@ export const AppointmentListQuery = z.object({
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   documentFilter: z.enum(["all", "none", "any"]).default("all"),
-  balanceFilter: z.enum(["all", "no_charges", "outstanding", "paid"]).default("all"),
+  balanceFilter: z.enum(["all", "no_charges", "has_charges", "outstanding", "paid"]).default("all"),
   sort: z.enum(["datetime", "title", "patient", "organization"]).default("datetime"),
   order: z.enum(["asc", "desc"]).default("desc"),
 });

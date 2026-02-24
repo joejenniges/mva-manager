@@ -4,6 +4,7 @@ import EntityTable, { type Column } from "../components/EntityTable";
 import TagBadge from "../components/TagBadge";
 import ColorPicker from "../components/ColorPicker";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import useHotkeys from "../hooks/useHotkeys";
 import useTableNavigation from "../hooks/useTableNavigation";
 
@@ -25,6 +26,7 @@ const TEMPLATE_VARIABLES = [
 
 export default function DocumentTypesPage() {
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const { data, total, page, loading, error, search, setPage, create, update, remove } =
     useEntities<DocumentType>("/api/v1/document-types");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -119,7 +121,7 @@ export default function DocumentTypesPage() {
     {
       key: "title",
       label: "Title",
-      render: (row) => (
+      render: (row) => canEdit("doc_types") ? (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -129,6 +131,8 @@ export default function DocumentTypesPage() {
         >
           {row.title}
         </button>
+      ) : (
+        <span className="text-gray-200">{row.title}</span>
       ),
     },
     {
@@ -147,7 +151,7 @@ export default function DocumentTypesPage() {
     },
   ];
 
-  const addButton = (
+  const addButton = canEdit("doc_types") ? (
     <button
       onClick={openCreateModal}
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
@@ -155,7 +159,7 @@ export default function DocumentTypesPage() {
       New Document Type
       <kbd className="relative -top-px ml-1.5 rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px]">N</kbd>
     </button>
-  );
+  ) : null;
 
   return (
     <div>
@@ -176,7 +180,7 @@ export default function DocumentTypesPage() {
         limit={25}
         onPageChange={setPage}
         onSearch={search}
-        onDelete={async (id) => { try { await remove(id); toast("Document type deleted", "success"); } catch { toast("Failed to delete document type", "error"); } }}
+        onDelete={canDelete("doc_types") ? async (id) => { try { await remove(id); toast("Document type deleted", "success"); } catch { toast("Failed to delete document type", "error"); } } : undefined}
         searchPlaceholder="Search document types...  (S)"
         header={addButton}
         searchInputRef={searchRef}

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, date, integer, boolean, numeric, timestamp, primaryKey, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, date, integer, boolean, numeric, timestamp, primaryKey, pgEnum, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // WHY: Single schema file instead of per-entity files. drizzle-kit runs in CJS
@@ -25,6 +25,20 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
+
+// WHY: Per-event RBAC. Admin users (from ADMIN_EMAILS env) get full access
+// implicitly. Non-admin users need a row here per event they can access.
+// Empty edit/delete arrays = read-only. No row = no visibility.
+export const userEventAccess = pgTable("user_event_access", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  permissions: jsonb("permissions").notNull().$type<{ edit: string[]; delete: string[] }>(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (t) => [
+  uniqueIndex("user_event_access_user_event_idx").on(t.userId, t.eventId),
+]);
 
 // =============================================================================
 // Events (the accident/case - top-level scope)
@@ -291,6 +305,15 @@ export const appointmentTemplateActivities = pgTable("appointment_template_activ
 // Relations
 // =============================================================================
 
+export const userEventAccessRelations = relations(userEventAccess, ({ one }) => ({
+  user: one(users, { fields: [userEventAccess.userId], references: [users.id] }),
+  event: one(events, { fields: [userEventAccess.eventId], references: [events.id] }),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+  eventAccess: many(userEventAccess),
+}));
+
 export const eventsRelations = relations(events, ({ many }) => ({
   appointments: many(appointments),
   appointmentTemplates: many(appointmentTemplates),
@@ -301,6 +324,7 @@ export const eventsRelations = relations(events, ({ many }) => ({
   activities: many(activities),
   documents: many(documents),
   documentTypes: many(documentTypes),
+  userEventAccess: many(userEventAccess),
 }));
 
 export const distancesRelations = relations(distances, ({ one }) => ({

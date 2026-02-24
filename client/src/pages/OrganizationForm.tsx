@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Navigate, Link } from "react-router-dom";
 import { api } from "../api";
 import { useNavigateAfterSave } from "../hooks/useNavigateAfterSave";
 import Spinner from "../components/Spinner";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import ColorPicker from "../components/ColorPicker";
 import MultiEntityPicker from "../components/MultiEntityPicker";
 import useHotkeys from "../hooks/useHotkeys";
@@ -26,7 +27,10 @@ export default function OrganizationForm() {
   const navigate = useNavigate();
   const navigateTo = useNavigateAfterSave();
   const { toast } = useToast();
+  const { canEdit } = usePermissions();
   const isNew = !id;
+
+  if (!canEdit("organizations")) return <Navigate to="/organizations" replace />;
 
   useHotkeys({
     Escape: () => {

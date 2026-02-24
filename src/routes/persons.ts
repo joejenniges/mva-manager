@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { validate } from "../middleware/validation.js";
 import { requireAuth } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/authorize.js";
 import { UuidParam } from "../schemas/common.js";
 import { PersonListQuery, CreatePersonSchema, UpdatePersonSchema } from "../schemas/persons.js";
 import * as service from "../services/persons.js";
@@ -20,19 +21,19 @@ router.get("/:id", validate(UuidParam, "params"), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", validate(CreatePersonSchema), async (req, res, next) => {
+router.post("/", requirePermission("edit", "persons"), validate(CreatePersonSchema), async (req, res, next) => {
   try {
     res.status(201).json(await service.createPerson(res.locals.eventId, req.body));
   } catch (err) { next(err); }
 });
 
-router.patch("/:id", validate(UuidParam, "params"), validate(UpdatePersonSchema), async (req, res, next) => {
+router.patch("/:id", requirePermission("edit", "persons"), validate(UuidParam, "params"), validate(UpdatePersonSchema), async (req, res, next) => {
   try {
     res.json(await service.updatePerson(res.locals.eventId, res.locals.params.id, req.body));
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", validate(UuidParam, "params"), async (req, res, next) => {
+router.delete("/:id", requirePermission("delete", "persons"), validate(UuidParam, "params"), async (req, res, next) => {
   try {
     await service.deletePerson(res.locals.eventId, res.locals.params.id);
     res.status(204).end();

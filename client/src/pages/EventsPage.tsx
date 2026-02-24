@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEntities } from "../hooks/useEntities";
 import EntityTable, { type Column } from "../components/EntityTable";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import { useEvent } from "../event";
 import useHotkeys from "../hooks/useHotkeys";
 import useTableNavigation from "../hooks/useTableNavigation";
@@ -20,6 +21,7 @@ interface EventRow {
 export default function EventsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin } = usePermissions();
   const { activeEvent, refreshEvents } = useEvent();
   const { data, total, page, loading, error, search, setPage, remove } =
     useEntities<EventRow>("/api/v1/events");
@@ -82,7 +84,7 @@ export default function EventsPage() {
     },
   ];
 
-  const addButton = (
+  const addButton = isAdmin ? (
     <button
       onClick={() => navigate("/events/new")}
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
@@ -90,7 +92,7 @@ export default function EventsPage() {
       New Event
       <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
     </button>
-  );
+  ) : null;
 
   return (
     <div>
@@ -109,7 +111,7 @@ export default function EventsPage() {
         limit={25}
         onPageChange={setPage}
         onSearch={search}
-        onDelete={async (id) => {
+        onDelete={isAdmin ? async (id) => {
           try {
             await remove(id);
             refreshEvents();
@@ -117,7 +119,7 @@ export default function EventsPage() {
           } catch {
             toast("Failed to delete event", "error");
           }
-        }}
+        } : undefined}
         onRowClick={(row) => navigate(`/events/${row.id}`)}
         searchPlaceholder="Search events...  (S)"
         header={addButton}

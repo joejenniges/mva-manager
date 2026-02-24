@@ -4,6 +4,7 @@ import { useEntities } from "../hooks/useEntities";
 import EntityTable, { type Column } from "../components/EntityTable";
 import TagBadge from "../components/TagBadge";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import useHotkeys from "../hooks/useHotkeys";
 import useTableNavigation from "../hooks/useTableNavigation";
 
@@ -26,6 +27,7 @@ interface Person {
 export default function PersonsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const { data, total, page, loading, error, search, setPage, remove } =
     useEntities<Person>("/api/v1/persons");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -87,7 +89,7 @@ export default function PersonsPage() {
     },
   ];
 
-  const addButton = (
+  const addButton = canEdit("persons") ? (
     <button
       onClick={() => navigate("/persons/new")}
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
@@ -95,7 +97,7 @@ export default function PersonsPage() {
       New Person
       <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
     </button>
-  );
+  ) : null;
 
   return (
     <div>
@@ -114,7 +116,7 @@ export default function PersonsPage() {
         limit={25}
         onPageChange={setPage}
         onSearch={search}
-        onDelete={async (id) => { try { await remove(id); toast("Person deleted", "success"); } catch { toast("Failed to delete person", "error"); } }}
+        onDelete={canDelete("persons") ? async (id) => { try { await remove(id); toast("Person deleted", "success"); } catch { toast("Failed to delete person", "error"); } } : undefined}
         onRowClick={(row) => navigate(`/persons/${row.id}`)}
         searchPlaceholder="Search persons...  (S)"
         header={addButton}

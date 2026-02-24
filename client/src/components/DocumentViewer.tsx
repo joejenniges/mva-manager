@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getStoredToken, getStoredEventId } from "../api";
+import { getAuthHeaders, getStoredEventId } from "../api";
 import Spinner from "./Spinner";
 
 interface Props {
@@ -22,13 +22,7 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
     let cancelled = false;
     const url = `/api/v1/documents/${documentId}/file`;
 
-    const headers: Record<string, string> = {};
-    if (import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYPASS === "true") {
-      headers["X-Dev-User"] = "user@example.com";
-    } else {
-      const token = getStoredToken();
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-    }
+    const headers: Record<string, string> = { ...getAuthHeaders() };
 
     const eventId = getStoredEventId();
     if (eventId) headers["X-Event-Id"] = eventId;

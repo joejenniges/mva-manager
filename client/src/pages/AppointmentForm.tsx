@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Navigate, Link } from "react-router-dom";
 import { api } from "../api";
 import { useNavigateAfterSave } from "../hooks/useNavigateAfterSave";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import { normalizeDateValue } from "../utils/dateInput";
 import EntityPicker from "../components/EntityPicker";
 import MultiEntityPicker from "../components/MultiEntityPicker";
@@ -27,8 +28,11 @@ export default function AppointmentForm() {
   const navigate = useNavigate();
   const navigateTo = useNavigateAfterSave();
   const { toast } = useToast();
+  const { canEdit } = usePermissions();
   const [searchParams] = useSearchParams();
   const isNew = !id;
+
+  if (!canEdit("appointments")) return <Navigate to="/appointments" replace />;
 
   useHotkeys({
     Escape: () => {

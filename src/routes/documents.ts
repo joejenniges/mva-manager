@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { validate } from "../middleware/validation.js";
 import { requireAuth } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/authorize.js";
 import { upload } from "../middleware/upload.js";
 import { UuidParam } from "../schemas/common.js";
 import { DocumentMetadataSchema, UpdateDocumentSchema, DocumentListQuery, LinkAppointmentSchema, DocumentAppointmentParam } from "../schemas/documents.js";
@@ -42,7 +43,7 @@ router.get("/:id/file", validate(UuidParam, "params"), async (req, res, next) =>
 });
 
 // Upload new document (multipart form: file + JSON metadata in body fields)
-router.post("/", upload.single("file"), async (req, res, next) => {
+router.post("/", requirePermission("edit", "documents"), upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "No file uploaded" } });
@@ -78,7 +79,7 @@ router.delete("/:id/appointments/:appointmentId", validate(DocumentAppointmentPa
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", validate(UuidParam, "params"), async (req, res, next) => {
+router.delete("/:id", requirePermission("delete", "documents"), validate(UuidParam, "params"), async (req, res, next) => {
   try {
     const storedFilename = await service.deleteDocument(res.locals.eventId, res.locals.params.id);
     // Best-effort delete file from disk

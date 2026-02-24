@@ -37,7 +37,9 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
 async function authenticateRequest(req: Request): Promise<UserInfo> {
   // Dev mode: accept X-Dev-User header
   if (config.nodeEnv === "development" && req.headers["x-dev-user"]) {
-    return findOrCreateUser(req.headers["x-dev-user"] as string, "Dev User", null);
+    const email = req.headers["x-dev-user"] as string;
+    const user = await findOrCreateUser(email, "Dev User", null);
+    return { ...user, isAdmin: config.adminEmails.includes(email.toLowerCase()) };
   }
 
   const authHeader = req.headers.authorization;
@@ -70,7 +72,8 @@ async function verifySession(token: string): Promise<UserInfo | null> {
     .limit(1);
 
   if (row.length === 0) return null;
-  return row[0];
+  const user = row[0];
+  return { ...user, isAdmin: config.adminEmails.includes(user.email.toLowerCase()) };
 }
 
 async function verifyGoogleToken(token: string): Promise<UserInfo> {
@@ -96,20 +99,15 @@ async function verifyGoogleToken(token: string): Promise<UserInfo> {
     email = tokenInfo.email;
   }
 
-  validateEmail(email);
-  return findOrCreateUser(email, name || email.split("@")[0], avatarUrl || null);
+  // WHY: Login gating moved to session creation (POST /auth/session).
+  // Authentication (who are you?) is separate from authorization (what can you do?).
+  // Anyone with a valid Google token can authenticate; session creation checks
+  // if they're an admin or have any event access before issuing a session.
+  const user = await findOrCreateUser(email, name || email.split("@")[0], avatarUrl || null);
+  return { ...user, isAdmin: config.adminEmails.includes(email.toLowerCase()) };
 }
 
-// WHY: Email allowlist instead of domain check. This is a family tool where
-// users may have different email domains (gmail, outlook, etc.).
-function validateEmail(email: string): void {
-  if (config.allowedEmails.length === 0) return; // No restriction if empty
-  if (!config.allowedEmails.includes(email.toLowerCase())) {
-    throw new AppError(403, ERROR_CODES.FORBIDDEN, `Email ${email} is not allowed`);
-  }
-}
-
-async function findOrCreateUser(email: string, name: string, avatarUrl: string | null): Promise<UserInfo> {
+async function findOrCreateUser(email: string, name: string, avatarUrl: string | null): Promise<Omit<UserInfo, "isAdmin">> {
   const db = getDb();
 
   // Upsert: create user if not exists, update name/avatar if they changed
@@ -125,4 +123,4 @@ async function findOrCreateUser(email: string, name: string, avatarUrl: string |
   return result[0];
 }
 
-export { validateEmail, findOrCreateUser };
+export { findOrCreateUser };

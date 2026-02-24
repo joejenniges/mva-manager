@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEntities } from "../hooks/useEntities";
 import EntityTable, { type Column } from "../components/EntityTable";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import useHotkeys from "../hooks/useHotkeys";
 import useTableNavigation from "../hooks/useTableNavigation";
 
@@ -18,6 +19,7 @@ interface Location {
 export default function LocationsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const { data, total, page, loading, error, search, setPage, remove } =
     useEntities<Location>("/api/v1/locations");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -42,7 +44,7 @@ export default function LocationsPage() {
     { key: "zip", label: "Zip", render: (row) => row.zip || "--", hideOnMobile: true },
   ];
 
-  const addButton = (
+  const addButton = canEdit("locations") ? (
     <button
       onClick={() => navigate("/locations/new")}
       className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
@@ -50,7 +52,7 @@ export default function LocationsPage() {
       New Location
       <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
     </button>
-  );
+  ) : null;
 
   return (
     <div>
@@ -69,7 +71,7 @@ export default function LocationsPage() {
         limit={25}
         onPageChange={setPage}
         onSearch={search}
-        onDelete={async (id) => { try { await remove(id); toast("Location deleted", "success"); } catch { toast("Failed to delete location", "error"); } }}
+        onDelete={canDelete("locations") ? async (id) => { try { await remove(id); toast("Location deleted", "success"); } catch { toast("Failed to delete location", "error"); } } : undefined}
         onRowClick={(row) => navigate(`/locations/${row.id}`)}
         searchPlaceholder="Search locations...  (S)"
         header={addButton}

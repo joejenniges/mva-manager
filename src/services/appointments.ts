@@ -18,7 +18,7 @@ interface AppointmentListParams {
   dateFrom?: string;
   dateTo?: string;
   documentFilter?: "all" | "none" | "any";
-  balanceFilter?: "all" | "no_charges" | "outstanding" | "paid";
+  balanceFilter?: "all" | "no_charges" | "has_charges" | "outstanding" | "paid";
   sort?: "datetime" | "title" | "patient" | "organization";
   order?: "asc" | "desc";
 }
@@ -75,6 +75,8 @@ export async function listAppointments(eventId: string, params: AppointmentListP
 
   if (balanceFilter === "no_charges") {
     conditions.push(sql`${chargesSub} = 0`);
+  } else if (balanceFilter === "has_charges") {
+    conditions.push(sql`${chargesSub} > 0`);
   } else if (balanceFilter === "outstanding") {
     conditions.push(sql`${chargesSub} > 0`);
     conditions.push(sql`${balanceSub} > 0`);

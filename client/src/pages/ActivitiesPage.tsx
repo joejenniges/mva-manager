@@ -4,6 +4,7 @@ import EntityTable, { type Column } from "../components/EntityTable";
 import TagBadge from "../components/TagBadge";
 import ColorPicker from "../components/ColorPicker";
 import { useToast } from "../components/Toast";
+import { usePermissions } from "../permissions";
 import useHotkeys from "../hooks/useHotkeys";
 import useTableNavigation from "../hooks/useTableNavigation";
 
@@ -15,6 +16,7 @@ interface Activity {
 
 export default function ActivitiesPage() {
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const { data, total, page, loading, error, search, setPage, create, update, remove } =
     useEntities<Activity>("/api/v1/activities");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -95,7 +97,7 @@ export default function ActivitiesPage() {
             className="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
             autoFocus
           />
-        ) : (
+        ) : canEdit("activities") ? (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -105,6 +107,8 @@ export default function ActivitiesPage() {
           >
             {row.title}
           </button>
+        ) : (
+          <span className="text-gray-200">{row.title}</span>
         ),
     },
     {
@@ -179,9 +183,9 @@ export default function ActivitiesPage() {
         limit={25}
         onPageChange={setPage}
         onSearch={search}
-        onDelete={async (id) => { try { await remove(id); toast("Activity deleted", "success"); } catch { toast("Failed to delete activity", "error"); } }}
+        onDelete={canDelete("activities") ? async (id) => { try { await remove(id); toast("Activity deleted", "success"); } catch { toast("Failed to delete activity", "error"); } } : undefined}
         searchPlaceholder="Search activities...  (S)"
-        header={createForm}
+        header={canEdit("activities") ? createForm : undefined}
         searchInputRef={searchRef}
         selectedIndex={tableNav.selectedIndex}
       />

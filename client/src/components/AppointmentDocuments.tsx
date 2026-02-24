@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
-import { api, getStoredToken, getStoredEventId } from "../api";
+import { api, getAuthHeaders, getStoredEventId } from "../api";
 import TagBadge from "./TagBadge";
 import Spinner from "./Spinner";
 import FileDropzone from "./FileDropzone";
@@ -7,6 +7,7 @@ import type { FileDropzoneHandle } from "./FileDropzone";
 import DocumentViewer from "./DocumentViewer";
 import DocumentPicker from "./DocumentPicker";
 import { useToast } from "./Toast";
+import { usePermissions } from "../permissions";
 
 interface DocType {
   id: string;
@@ -36,6 +37,8 @@ interface Props {
 
 const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(function AppointmentDocuments({ appointmentId, appointment, onViewDocument }, ref) {
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
+  const editable = canEdit("documents");
   const dropzoneRef = useRef<FileDropzoneHandle>(null);
   const [docs, setDocs] = useState<any[]>([]);
   // WHY: Internal viewing state is only used when onViewDocument is not provided
@@ -130,13 +133,7 @@ const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(funct
     if (uploadTitle.trim()) formData.append("title", uploadTitle.trim());
 
     try {
-      const token = getStoredToken();
-      const headers: Record<string, string> = {};
-      if (import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYPASS === "true") {
-        headers["X-Dev-User"] = "user@example.com";
-      } else if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      const headers: Record<string, string> = { ...getAuthHeaders() };
       // WHY: FormData uploads can't use api() helper (it sets Content-Type to JSON).
       // Must manually inject X-Event-Id for event scoping.
       const eventId = getStoredEventId();
@@ -183,65 +180,67 @@ const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(funct
     <div id="appointment-documents-section">
       <h3 className="mb-3 text-sm font-medium uppercase text-gray-500">Documents</h3>
 
-      {!pendingFile ? (
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <FileDropzone ref={dropzoneRef} onFileSelect={handleFileSelect} />
-          </div>
-          <button
-            type="button"
-            onClick={() => setPickerOpen(true)}
-            className="rounded-lg border-2 border-dashed border-gray-700 px-4 text-sm text-gray-400 transition-colors hover:border-gray-600 hover:text-gray-300"
-          >
-            Attach Existing
-          </button>
-        </div>
-      ) : (
-        <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-300">{pendingFile.name}</span>
+      {editable && (
+        !pendingFile ? (
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <FileDropzone ref={dropzoneRef} onFileSelect={handleFileSelect} />
+            </div>
             <button
               type="button"
-              onClick={cancelUpload}
-              className="text-sm text-gray-400 hover:text-gray-200"
+              onClick={() => setPickerOpen(true)}
+              className="rounded-lg border-2 border-dashed border-gray-700 px-4 text-sm text-gray-400 transition-colors hover:border-gray-600 hover:text-gray-300"
             >
-              Cancel
+              Attach Existing
             </button>
           </div>
+        ) : (
+          <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm text-gray-300">{pendingFile.name}</span>
+              <button
+                type="button"
+                onClick={cancelUpload}
+                className="text-sm text-gray-400 hover:text-gray-200"
+              >
+                Cancel
+              </button>
+            </div>
 
-          <div className="mb-3">
-            <label className="mb-1 block text-sm text-gray-400">Document Type</label>
-            <select
-              value={selectedDocTypeId}
-              onChange={(e) => handleDocTypeChange(e.target.value)}
-              className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+            <div className="mb-3">
+              <label className="mb-1 block text-sm text-gray-400">Document Type</label>
+              <select
+                value={selectedDocTypeId}
+                onChange={(e) => handleDocTypeChange(e.target.value)}
+                className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">None</option>
+                {docTypes.map((dt) => (
+                  <option key={dt.id} value={dt.id}>{dt.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-3">
+              <label className="mb-1 block text-sm text-gray-400">Title</label>
+              <input
+                type="text"
+                value={uploadTitle}
+                onChange={(e) => setUploadTitle(e.target.value)}
+                placeholder={pendingFile.name}
+                className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              <option value="">None</option>
-              {docTypes.map((dt) => (
-                <option key={dt.id} value={dt.id}>{dt.title}</option>
-              ))}
-            </select>
+              {uploading ? "Uploading..." : "Upload"}
+            </button>
           </div>
-
-          <div className="mb-3">
-            <label className="mb-1 block text-sm text-gray-400">Title</label>
-            <input
-              type="text"
-              value={uploadTitle}
-              onChange={(e) => setUploadTitle(e.target.value)}
-              placeholder={pendingFile.name}
-              className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-            />
-          </div>
-
-          <button
-            onClick={handleUpload}
-            disabled={uploading}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {uploading ? "Uploading..." : "Upload"}
-          </button>
-        </div>
+        )
       )}
 
       {docs.length > 0 && (
@@ -253,7 +252,7 @@ const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(funct
               </div>
               <div className="space-y-1">
                 {group.docs.map((doc: any) => (
-                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} docTypes={docTypes} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
+                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} docTypes={docTypes} readOnly={!editable} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
                 ))}
               </div>
             </div>
@@ -263,7 +262,7 @@ const AppointmentDocuments = forwardRef<AppointmentDocumentsHandle, Props>(funct
               <div className="mb-2 text-xs uppercase text-gray-500">Other</div>
               <div className="space-y-1">
                 {ungrouped.map((doc: any) => (
-                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} docTypes={docTypes} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
+                  <DocumentRow key={doc.id} doc={doc} appointmentId={appointmentId} docTypes={docTypes} readOnly={!editable} onView={() => onViewDocument ? onViewDocument(doc) : setViewing(doc)} onUpdate={loadDocs} />
                 ))}
               </div>
             </div>
@@ -301,7 +300,7 @@ export default AppointmentDocuments;
 // to AppointmentDocuments' state (onView, onUpdate). Includes rename + unlink actions.
 // WHY unlink instead of delete: Documents can now be shared across appointments.
 // Removing from one appointment shouldn't delete the file -- just removes the junction row.
-function DocumentRow({ doc, appointmentId, docTypes, onView, onUpdate }: { doc: any; appointmentId: string; docTypes: DocType[]; onView: () => void; onUpdate: () => void }) {
+function DocumentRow({ doc, appointmentId, docTypes, readOnly, onView, onUpdate }: { doc: any; appointmentId: string; docTypes: DocType[]; readOnly?: boolean; onView: () => void; onUpdate: () => void }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -401,8 +400,8 @@ function DocumentRow({ doc, appointmentId, docTypes, onView, onUpdate }: { doc: 
 
       {!editing && createdAt && <span className="text-xs text-gray-600">{createdAt}</span>}
 
-      {/* Actions - visible on hover */}
-      {!editing && (
+      {/* Actions - visible on hover, hidden for read-only users */}
+      {!editing && !readOnly && (
       <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <button onClick={startEdit} className="rounded p-1 text-gray-500 hover:text-gray-300" title="Edit">
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

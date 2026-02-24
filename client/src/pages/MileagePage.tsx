@@ -84,12 +84,16 @@ export default function MileagePage() {
           ))}
         </select>
         <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-400">
-          <input
-            type="checkbox"
-            checked={completedOnly}
-            onChange={(e) => setCompletedOnly(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
-          />
+          <div className="relative inline-flex items-center">
+            <input
+              type="checkbox"
+              checked={completedOnly}
+              onChange={(e) => setCompletedOnly(e.target.checked)}
+              className="sr-only"
+            />
+            <div className={`h-5 w-9 rounded-full transition-colors ${completedOnly ? "bg-blue-600" : "bg-gray-700"}`} />
+            <div className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${completedOnly ? "translate-x-4" : ""}`} />
+          </div>
           Completed only
         </label>
       </div>

@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import type { PaginatedResponse } from "../types";
 import TagBadge from "../components/TagBadge";
+import StatusBadge from "../components/StatusBadge";
 import Spinner from "../components/Spinner";
 import EmptyState from "../components/EmptyState";
 import TemplateQuickAdd from "../components/TemplateQuickAdd";
+import { usePermissions } from "../permissions";
 import useHotkeys from "../hooks/useHotkeys";
 import useTableNavigation from "../hooks/useTableNavigation";
 import { normalizeDateValue } from "../utils/dateInput";
@@ -17,6 +19,7 @@ interface AppointmentRow {
   organization: { id: string; name: string; color: string | null } | null;
   patient: { id: string; name: string; color: string | null } | null;
   appointmentActivities: { activity: { id: string; title: string; color: string } }[];
+  insuranceStatus: string | null;
   costItems: { amount: string; type: string }[];
   documentAppointments: { documentId: string }[];
 }
@@ -28,7 +31,7 @@ interface FilterOption {
 
 type SortField = "datetime" | "title" | "patient" | "organization";
 type DocFilter = "all" | "none" | "any";
-type BalanceFilter = "all" | "no_charges" | "outstanding" | "paid";
+type BalanceFilter = "all" | "no_charges" | "has_charges" | "outstanding" | "paid";
 
 const STORAGE_KEY = "appointments-filters";
 const PERSIST_KEY = "appointments-persist-filters";
@@ -84,6 +87,7 @@ function saveFilters(filters: SavedFilters) {
 
 export default function AppointmentsPage() {
   const navigate = useNavigate();
+  const { canEdit } = usePermissions();
   const initial = loadFilters();
   const [data, setData] = useState<AppointmentRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -197,7 +201,7 @@ export default function AppointmentsPage() {
       if (item.type === "charge") chargesCents += cents;
       else creditsCents += cents;
     }
-    return { charges: chargesCents / 100, balance: (chargesCents - creditsCents) / 100 };
+    return { charges: chargesCents / 100, payments: creditsCents / 100, balance: (chargesCents - creditsCents) / 100 };
   }
 
   function handleSort(field: SortField) {
@@ -219,22 +223,24 @@ export default function AppointmentsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-100">Appointments</h2>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowTemplateModal(true)}
-            className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-600"
-          >
-            From Template
-            <kbd className="relative -top-px ml-1.5 hidden rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400 md:inline">F</kbd>
-          </button>
-          <button
-            onClick={() => navigate("/appointments/new")}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            New Appointment
-            <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
-          </button>
-        </div>
+        {canEdit("appointments") && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowTemplateModal(true)}
+              className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-600"
+            >
+              From Template
+              <kbd className="relative -top-px ml-1.5 hidden rounded border border-gray-500/30 bg-gray-600/50 px-1 py-0.5 font-mono text-[10px] text-gray-400 md:inline">F</kbd>
+            </button>
+            <button
+              onClick={() => navigate("/appointments/new")}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              New Appointment
+              <kbd className="relative -top-px ml-1.5 hidden rounded border border-blue-400/30 bg-blue-500/20 px-1 py-0.5 font-mono text-[10px] md:inline">N</kbd>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -282,6 +288,7 @@ export default function AppointmentsPage() {
         >
           <option value="all">All Balances</option>
           <option value="no_charges">No Charges</option>
+          <option value="has_charges">Has Charges</option>
           <option value="outstanding">Outstanding</option>
           <option value="paid">Paid</option>
         </select>
@@ -325,25 +332,27 @@ export default function AppointmentsPage() {
         </label>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-700">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-lg border border-gray-700">
+        <table className="w-full text-sm whitespace-nowrap">
           <thead className="bg-gray-800 text-gray-300">
             <tr>
               <SortHeader field="datetime" label="Date" sort={sort} order={order} onSort={handleSort} className="w-32" />
               <SortHeader field="patient" label="Patient" sort={sort} order={order} onSort={handleSort} className="w-28" />
               <SortHeader field="organization" label="Organization" sort={sort} order={order} onSort={handleSort} />
-              <SortHeader field="title" label="Title" sort={sort} order={order} onSort={handleSort} className="hidden md:table-cell" />
-              <th className="hidden px-4 py-3 text-left font-medium md:table-cell">Activities</th>
-              <th className="hidden px-4 py-3 text-right font-medium md:table-cell">Docs</th>
-              <th className="hidden px-4 py-3 text-right font-medium md:table-cell">Charges</th>
-              <th className="hidden px-4 py-3 text-right font-medium md:table-cell">Balance</th>
+              <SortHeader field="title" label="Title" sort={sort} order={order} onSort={handleSort} />
+              <th className="px-4 py-3 text-left font-medium">Activities</th>
+              <th className="px-4 py-3 text-left font-medium">Insurance</th>
+              <th className="px-4 py-3 text-right font-medium">Docs</th>
+              <th className="px-4 py-3 text-right font-medium">Charges</th>
+              <th className="px-4 py-3 text-right font-medium">Balance</th>
+              <th className="px-4 py-3 text-right font-medium">Payments</th>
             </tr>
           </thead>
           <tbody className="bg-gray-900">
             {loading ? (
-              <tr><td colSpan={8} className="px-4 py-8"><Spinner className="py-4" /></td></tr>
+              <tr><td colSpan={10} className="px-4 py-8"><Spinner className="py-4" /></td></tr>
             ) : data.length === 0 ? (
-              <tr><td colSpan={8}>
+              <tr><td colSpan={10}>
                 <EmptyState
                   title="No appointments found"
                   description={hasFilters ? "Try different filters." : "Create your first appointment to get started."}
@@ -351,7 +360,7 @@ export default function AppointmentsPage() {
                 />
               </td></tr>
             ) : data.map((appt, i) => {
-              const { charges, balance } = costSummary(appt.costItems);
+              const { charges, payments, balance } = costSummary(appt.costItems);
               return (
                 <tr
                   key={appt.id}
@@ -368,21 +377,25 @@ export default function AppointmentsPage() {
                   <td className="px-4 py-3 text-gray-300">
                     {appt.organization ? <ColorDot name={appt.organization.name} color={appt.organization.color} /> : "-"}
                   </td>
-                  <td className="hidden px-4 py-3 text-gray-100 md:table-cell">{appt.title || "Untitled"}</td>
-                  <td className="hidden px-4 py-3 md:table-cell">
+                  <td className="px-4 py-3 text-gray-100">{appt.title || "Untitled"}</td>
+                  <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {appt.appointmentActivities.map((aa) => (
                         <TagBadge key={aa.activity.id} label={aa.activity.title} color={aa.activity.color} />
                       ))}
                     </div>
                   </td>
-                  <td className={`hidden px-4 py-3 text-right md:table-cell ${appt.documentAppointments.length === 0 ? "text-red-400" : (appt.documentAppointments.length == 1 ? "text-yellow-400" : "text-gray-300")}`}>
+                  <td className="px-4 py-3">
+                    {appt.insuranceStatus && <StatusBadge status={appt.insuranceStatus as any} />}
+                  </td>
+                  <td className={`px-4 py-3 text-right ${appt.documentAppointments.length === 0 ? "text-red-400" : (appt.documentAppointments.length == 1 ? "text-yellow-400" : "text-gray-300")}`}>
                     {appt.documentAppointments.length}
                   </td>
-                  <td className="hidden px-4 py-3 text-right text-gray-300 md:table-cell">{charges > 0 ? `$${charges.toFixed(2)}` : "-"}</td>
-                  <td className={`hidden px-4 py-3 text-right md:table-cell ${balance > 0 ? "text-yellow-400" : balance === 0 && charges > 0 ? "text-green-500" : "text-gray-500"}`}>
+                  <td className="px-4 py-3 text-right text-gray-300">{charges > 0 ? `$${charges.toFixed(2)}` : "-"}</td>
+                  <td className={`px-4 py-3 text-right ${balance > 0 ? "text-yellow-400" : balance === 0 && charges > 0 ? "text-green-500" : "text-gray-500"}`}>
                     {charges > 0 ? `$${balance.toFixed(2)}` : "-"}
                   </td>
+                  <td className="px-4 py-3 text-right text-gray-300">{payments > 0 ? `$${payments.toFixed(2)}` : "-"}</td>
                 </tr>
               );
             })}
@@ -390,12 +403,12 @@ export default function AppointmentsPage() {
           {!loading && data.length > 0 && (
             <tfoot className="border-t border-gray-700 bg-gray-800/50">
               <tr>
-                <td colSpan={3} className="px-4 py-2 text-right text-sm font-medium text-gray-400 md:hidden">Total ({total} appointments)</td>
-                <td colSpan={6} className="hidden px-4 py-2 text-right text-sm font-medium text-gray-400 md:table-cell">Total ({total} appointments)</td>
-                <td className="hidden px-4 py-2 text-right text-sm font-medium text-gray-200 md:table-cell">{totalCharges > 0 ? `$${totalCharges.toFixed(2)}` : "-"}</td>
-                <td className={`hidden px-4 py-2 text-right text-sm font-medium md:table-cell ${totalBalance > 0 ? "text-yellow-400" : totalBalance === 0 && totalCharges > 0 ? "text-green-500" : "text-gray-500"}`}>
+                <td colSpan={7} className="px-4 py-2 text-right text-sm font-medium text-gray-400">Total ({total} appointments)</td>
+                <td className="px-4 py-2 text-right text-sm font-medium text-gray-200">{totalCharges > 0 ? `$${totalCharges.toFixed(2)}` : "-"}</td>
+                <td className={`px-4 py-2 text-right text-sm font-medium ${totalBalance > 0 ? "text-yellow-400" : totalBalance === 0 && totalCharges > 0 ? "text-green-500" : "text-gray-500"}`}>
                   {totalCharges > 0 ? `$${totalBalance.toFixed(2)}` : "-"}
                 </td>
+                <td className="px-4 py-2 text-right text-sm font-medium text-gray-200">{totalCredits > 0 ? `$${totalCredits.toFixed(2)}` : "-"}</td>
               </tr>
             </tfoot>
           )}

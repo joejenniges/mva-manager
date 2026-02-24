@@ -5,7 +5,10 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5433/mva-manager",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-  allowedEmails: (process.env.ALLOWED_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean),
+  // WHY: ADMIN_EMAILS with ALLOWED_EMAILS fallback so existing deployments
+  // don't break during the rename transition.
+  adminEmails: (process.env.ADMIN_EMAILS || process.env.ALLOWED_EMAILS || "")
+    .split(",").map(e => e.trim().toLowerCase()).filter(Boolean),
   serverUrl: process.env.SERVER_URL || "http://localhost:3100",
   logLevel: process.env.LOG_LEVEL || "info",
   nodeEnv: process.env.NODE_ENV || "development",

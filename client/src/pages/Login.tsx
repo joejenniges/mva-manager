@@ -3,7 +3,7 @@ import { useAuth } from "../auth";
 import { Navigate } from "react-router-dom";
 
 export default function Login() {
-  const { login, user, loading } = useAuth();
+  const { login, user, loading, loginError } = useAuth();
 
   const googleLogin = useGoogleLogin({
     onSuccess: (resp) => {
@@ -43,6 +43,9 @@ export default function Login() {
           </svg>
           Sign in with Google
         </button>
+        {loginError && (
+          <p className="mt-3 text-center text-sm text-red-400">{loginError}</p>
+        )}
       </div>
     </div>
   );

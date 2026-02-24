@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ToastProvider } from "./components/Toast";
 import { AuthProvider } from "./auth";
 import { EventProvider } from "./event";
+import { PermissionsProvider } from "./permissions";
 import App from "./App";
 import "./index.css";
 
@@ -15,7 +16,9 @@ createRoot(document.getElementById("root")!).render(
       <ToastProvider>
         <AuthProvider>
           <EventProvider>
-            <App />
+            <PermissionsProvider>
+              <App />
+            </PermissionsProvider>
           </EventProvider>
         </AuthProvider>
       </ToastProvider>
