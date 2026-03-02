@@ -33,8 +33,10 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
-  // PDF: rendered pages
+  // PDF: rendered pages + blob URL for download
   const [pdfPages, setPdfPages] = useState<HTMLCanvasElement[]>([]);
+  const [pdfDownloadUrl, setPdfDownloadUrl] = useState<string | null>(null);
+  const pdfDownloadUrlRef = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
 
@@ -61,6 +63,11 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
         const res = await fetchDocument(controller.signal);
         const buffer = await res.arrayBuffer();
         if (cancelled) return;
+
+        // Create a blob URL for download (pdf.js consumes the ArrayBuffer for rendering)
+        const dlUrl = URL.createObjectURL(new Blob([buffer], { type: "application/pdf" }));
+        pdfDownloadUrlRef.current = dlUrl;
+        setPdfDownloadUrl(dlUrl);
 
         const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
         if (cancelled) {
@@ -111,6 +118,10 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
       if (pdfDocRef.current) {
         pdfDocRef.current.destroy();
         pdfDocRef.current = null;
+      }
+      if (pdfDownloadUrlRef.current) {
+        URL.revokeObjectURL(pdfDownloadUrlRef.current);
+        pdfDownloadUrlRef.current = null;
       }
     };
   }, [isPdf, fetchDocument]);
@@ -167,30 +178,36 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
   // each page to a <canvas>, which works on all browsers/devices.
   if (isPdf) {
     return (
-      <div
-        ref={containerRef}
-        className={`overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 ${fillHeight ? "h-full" : "max-h-[600px]"}`}
-      >
-        {pdfPages.map((canvas, i) => (
-          <div
-            key={i}
-            ref={(el) => {
-              if (el && !el.firstChild) el.appendChild(canvas);
-            }}
-          />
-        ))}
+      <div className={`relative ${fillHeight ? "h-full" : ""}`}>
+        <div
+          ref={containerRef}
+          className={`overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 ${fillHeight ? "h-full" : "max-h-[600px]"}`}
+        >
+          {pdfPages.map((canvas, i) => (
+            <div
+              key={i}
+              ref={(el) => {
+                if (el && !el.firstChild) el.appendChild(canvas);
+              }}
+            />
+          ))}
+        </div>
+        {pdfDownloadUrl && <DownloadButton url={pdfDownloadUrl} filename={title || "document.pdf"} />}
       </div>
     );
   }
 
   if (mimeType.startsWith("image/")) {
     return (
-      <div className={`overflow-hidden rounded-lg border border-gray-700 ${fillHeight ? "h-full" : ""}`}>
-        <img
-          src={blobUrl!}
-          alt={title || "Document"}
-          className={`w-full object-contain bg-gray-800 ${fillHeight ? "h-full" : "max-h-[600px]"}`}
-        />
+      <div className={`relative ${fillHeight ? "h-full" : ""}`}>
+        <div className={`overflow-hidden rounded-lg border border-gray-700 ${fillHeight ? "h-full" : ""}`}>
+          <img
+            src={blobUrl!}
+            alt={title || "Document"}
+            className={`w-full object-contain bg-gray-800 ${fillHeight ? "h-full" : "max-h-[600px]"}`}
+          />
+        </div>
+        <DownloadButton url={blobUrl!} filename={title || "document"} />
       </div>
     );
   }
@@ -200,5 +217,20 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
       Preview not available for {mimeType}.{" "}
       <a href={blobUrl!} download={title || "document"} className="text-blue-400 hover:underline">Download</a>
     </div>
+  );
+}
+
+function DownloadButton({ url, filename }: { url: string; filename: string }) {
+  return (
+    <a
+      href={url}
+      download={filename}
+      className="absolute right-2 top-2 rounded-md bg-gray-900/80 p-1.5 text-gray-400 hover:bg-gray-900 hover:text-gray-200"
+      title="Download"
+    >
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    </a>
   );
 }

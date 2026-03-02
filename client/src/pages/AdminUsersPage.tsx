@@ -21,6 +21,14 @@ interface EventAccessRow {
   eventId: string;
   eventTitle: string;
   permissions: EventPermissions;
+  defaultPersonId: string | null;
+  defaultPersonName: string | null;
+}
+
+interface PatientOption {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 const ENTITY_LABELS: Record<EntityType, string> = {
@@ -58,6 +66,8 @@ export default function AdminUsersPage() {
   // Permission editor state
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editPerms, setEditPerms] = useState<EventPermissions>({ edit: [], delete: [] });
+  const [editDefaultPersonId, setEditDefaultPersonId] = useState<string | null>(null);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
   const [saving, setSaving] = useState(false);
 
   const loadUsers = useCallback(() => {
@@ -128,6 +138,11 @@ export default function AdminUsersPage() {
     const existing = accessRows.find((r) => r.eventId === eventId);
     setEditingEventId(eventId);
     setEditPerms(existing ? { ...existing.permissions } : { edit: [], delete: [] });
+    setEditDefaultPersonId(existing?.defaultPersonId ?? null);
+    // Fetch patients for this event
+    api<{ data: PatientOption[] }>(`/api/v1/admin/events/${eventId}/patients`)
+      .then((res) => setPatients(res.data))
+      .catch(() => setPatients([]));
   }
 
   function togglePerm(action: "edit" | "delete", entity: EntityType) {
@@ -156,7 +171,7 @@ export default function AdminUsersPage() {
     try {
       await api(`/api/v1/admin/users/${selectedUser.id}/access/${editingEventId}`, {
         method: "PUT",
-        body: { permissions: editPerms },
+        body: { permissions: editPerms, defaultPersonId: editDefaultPersonId },
       });
       toast("Permissions saved", "success");
       setEditingEventId(null);
@@ -274,19 +289,18 @@ export default function AdminUsersPage() {
           <div className="flex h-40 items-center justify-center text-gray-500">
             Select a user to manage their event access
           </div>
-        ) : selectedUser.isAdmin ? (
-          <div>
-            <h3 className="mb-2 text-lg font-semibold text-gray-100">{selectedUser.name}</h3>
-            <p className="text-sm text-gray-400">
-              This user is an admin (defined in ADMIN_EMAILS). They have full access to everything.
-            </p>
-          </div>
         ) : (
           <div>
             <h3 className="mb-4 text-lg font-semibold text-gray-100">
               {selectedUser.name}
               <span className="ml-2 text-sm font-normal text-gray-500">{selectedUser.email}</span>
             </h3>
+
+            {selectedUser.isAdmin && (
+              <div className="mb-4 rounded-lg border border-amber-600/30 bg-amber-950/20 px-4 py-2 text-sm text-amber-300">
+                Admin — has full access to everything. Patient linking below still applies for dashboard.
+              </div>
+            )}
 
             {/* Existing access */}
             {accessLoading ? (
@@ -322,6 +336,7 @@ export default function AdminUsersPage() {
                             {row.permissions.edit.length === 0 && row.permissions.delete.length === 0
                               ? "Read only"
                               : `Edit: ${row.permissions.edit.length}, Delete: ${row.permissions.delete.length}`}
+                            {row.defaultPersonName && ` · Patient: ${row.defaultPersonName}`}
                           </div>
                         </div>
                       ))}
@@ -367,6 +382,21 @@ export default function AdminUsersPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
+                  </div>
+
+                  {/* Default Patient */}
+                  <div className="mb-4">
+                    <label className="mb-1 block text-xs font-medium text-gray-400">Default Patient</label>
+                    <select
+                      value={editDefaultPersonId || ""}
+                      onChange={(e) => setEditDefaultPersonId(e.target.value || null)}
+                      className="w-full rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="">None</option>
+                      {patients.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Presets */}

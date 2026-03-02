@@ -20,6 +20,7 @@ import { geocodeRouter } from "./geocode.js";
 import { eventsRouter } from "./events.js";
 import { mileageRouter } from "./mileage.js";
 import { adminRouter } from "./admin.js";
+import { dashboardRouter } from "./dashboard.js";
 
 const router = Router();
 
@@ -88,5 +89,6 @@ router.use("/documents", requireAuth, requireEvent, requireEventAccess, document
 router.use("/appointment-templates", requireAuth, requireEvent, requireEventAccess, appointmentTemplatesRouter);
 router.use("/calendar", requireAuth, requireEvent, requireEventAccess, calendarRouter);
 router.use("/mileage", requireAuth, requireEvent, requireEventAccess, mileageRouter);
+router.use("/dashboard", requireAuth, requireEvent, requireEventAccess, dashboardRouter);
 
 export { router as apiRouter };

@@ -34,6 +34,10 @@ export const userEventAccess = pgTable("user_event_access", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
   permissions: jsonb("permissions").notNull().$type<{ edit: string[]; delete: string[] }>(),
+  // WHY: Links user to their patient record for this event. Persons are event-scoped
+  // (same physical person = separate DB row per event), so the mapping is per user-event pair.
+  // Dashboard uses this to know whose appointments/financials/mileage to show.
+  defaultPersonId: uuid("default_person_id").references(() => persons.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
@@ -308,6 +312,7 @@ export const appointmentTemplateActivities = pgTable("appointment_template_activ
 export const userEventAccessRelations = relations(userEventAccess, ({ one }) => ({
   user: one(users, { fields: [userEventAccess.userId], references: [users.id] }),
   event: one(events, { fields: [userEventAccess.eventId], references: [events.id] }),
+  defaultPerson: one(persons, { fields: [userEventAccess.defaultPersonId], references: [persons.id] }),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({

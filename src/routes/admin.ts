@@ -1,12 +1,13 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/authorize.js";
 import { validate } from "../middleware/validation.js";
 import { AddUserSchema, SetPermissionsSchema, UserIdParam, UserEventParam } from "../schemas/admin.js";
 import { findOrCreateUser } from "../middleware/auth.js";
 import { getDb } from "../db/connection.js";
-import { users } from "../db/schema/index.js";
+import { users, persons } from "../db/schema/index.js";
 import { config } from "../config.js";
 import * as userAccessService from "../services/userAccess.js";
 
@@ -86,6 +87,7 @@ router.put("/users/:userId/access/:eventId", validate(UserEventParam, "params"),
       res.locals.params.userId,
       res.locals.params.eventId,
       req.body.permissions,
+      req.body.defaultPersonId,
     );
     res.json(row);
   } catch (err) { next(err); }
@@ -96,6 +98,21 @@ router.delete("/users/:userId/access/:eventId", validate(UserEventParam, "params
   try {
     await userAccessService.removeUserEventAccess(res.locals.params.userId, res.locals.params.eventId);
     res.status(204).end();
+  } catch (err) { next(err); }
+});
+
+// List patients (persons with isPatient=true) for a given event
+const EventIdParam = z.object({ eventId: z.string().uuid() });
+
+router.get("/events/:eventId/patients", validate(EventIdParam, "params"), async (req, res, next) => {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({ id: persons.id, name: persons.name, color: persons.color })
+      .from(persons)
+      .where(and(eq(persons.eventId, res.locals.params.eventId), eq(persons.isPatient, true)))
+      .orderBy(persons.name);
+    res.json({ data: rows });
   } catch (err) { next(err); }
 });
 

@@ -15,6 +15,13 @@
       "when": 1771938449462,
       "tag": "0001_brown_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772483457912,
+      "tag": "0002_dizzy_arachne",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/connection.js";
-import { userEventAccess, events } from "../db/schema/index.js";
+import { userEventAccess, events, persons } from "../db/schema/index.js";
 import type { EventPermissions } from "../types.js";
 
 export async function getUserEventAccess(userId: string, eventId: string): Promise<EventPermissions | null> {
@@ -36,14 +36,19 @@ export async function checkUserHasAnyAccess(userId: string): Promise<boolean> {
   return row.length > 0;
 }
 
-export async function setUserEventAccess(userId: string, eventId: string, permissions: EventPermissions) {
+export async function setUserEventAccess(
+  userId: string,
+  eventId: string,
+  permissions: EventPermissions,
+  defaultPersonId?: string | null,
+) {
   const db = getDb();
   const result = await db
     .insert(userEventAccess)
-    .values({ userId, eventId, permissions })
+    .values({ userId, eventId, permissions, defaultPersonId: defaultPersonId ?? null })
     .onConflictDoUpdate({
       target: [userEventAccess.userId, userEventAccess.eventId],
-      set: { permissions, updatedAt: new Date() },
+      set: { permissions, defaultPersonId: defaultPersonId ?? null, updatedAt: new Date() },
     })
     .returning();
 
@@ -68,8 +73,11 @@ export async function listUserEventAccess(userId: string) {
       eventId: userEventAccess.eventId,
       eventTitle: events.title,
       permissions: userEventAccess.permissions,
+      defaultPersonId: userEventAccess.defaultPersonId,
+      defaultPersonName: persons.name,
     })
     .from(userEventAccess)
     .innerJoin(events, eq(userEventAccess.eventId, events.id))
+    .leftJoin(persons, eq(userEventAccess.defaultPersonId, persons.id))
     .where(eq(userEventAccess.userId, userId));
 }

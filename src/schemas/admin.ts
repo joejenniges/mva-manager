@@ -15,6 +15,7 @@ export const SetPermissionsSchema = z.object({
     edit: z.array(z.enum(ENTITY_TYPES)).default([]),
     delete: z.array(z.enum(ENTITY_TYPES)).default([]),
   }),
+  defaultPersonId: z.string().uuid().nullable().optional(),
 });
 
 export const UserIdParam = z.object({
