@@ -375,31 +375,61 @@ export default function AppointmentDetail() {
       )}
     </div>
 
-    {/* Side panel document viewer */}
+    {/* Document viewer: fullscreen overlay on mobile, side panel on desktop */}
+    {/* WHY two containers: the side panel (sticky w-[45%]) is too small to read
+        on mobile screens. Below md breakpoint we show a fixed fullscreen overlay
+        instead, matching the modal pattern used on DocumentsPage. */}
     {viewingDoc && (
-      <div className="sticky top-0 flex h-[calc(100vh-5rem)] w-[45%] flex-shrink-0 flex-col rounded-lg border border-gray-700 bg-gray-900">
-        <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
-          <h3 className="min-w-0 truncate text-sm font-medium text-gray-100">
-            {viewingDoc.title || viewingDoc.originalFilename}
-          </h3>
-          <button
-            onClick={() => setViewingDoc(null)}
-            className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-200"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+      <>
+        {/* Mobile: fullscreen overlay */}
+        <div className="fixed inset-0 z-50 flex flex-col bg-gray-900 md:hidden">
+          <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
+            <h3 className="min-w-0 truncate text-sm font-medium text-gray-100">
+              {viewingDoc.title || viewingDoc.originalFilename}
+            </h3>
+            <button
+              onClick={() => setViewingDoc(null)}
+              className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-200"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 p-4">
+            <DocumentViewer
+              documentId={viewingDoc.id}
+              mimeType={viewingDoc.mimeType}
+              title={viewingDoc.title}
+              fillHeight
+            />
+          </div>
         </div>
-        <div className="min-h-0 flex-1 p-4">
-          <DocumentViewer
-            documentId={viewingDoc.id}
-            mimeType={viewingDoc.mimeType}
-            title={viewingDoc.title}
-            fillHeight
-          />
+        {/* Desktop: side panel */}
+        <div className="sticky top-0 hidden h-[calc(100vh-5rem)] w-[45%] flex-shrink-0 flex-col rounded-lg border border-gray-700 bg-gray-900 md:flex">
+          <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
+            <h3 className="min-w-0 truncate text-sm font-medium text-gray-100">
+              {viewingDoc.title || viewingDoc.originalFilename}
+            </h3>
+            <button
+              onClick={() => setViewingDoc(null)}
+              className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-200"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 p-4">
+            <DocumentViewer
+              documentId={viewingDoc.id}
+              mimeType={viewingDoc.mimeType}
+              title={viewingDoc.title}
+              fillHeight
+            />
+          </div>
         </div>
-      </div>
+      </>
     )}
     </div>
   );
