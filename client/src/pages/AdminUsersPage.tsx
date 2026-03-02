@@ -47,6 +47,9 @@ export default function AdminUsersPage() {
   const [addName, setAddName] = useState("");
   const [adding, setAdding] = useState(false);
 
+  // Delete user state: tracks which user ID is in "confirm" or "deleting" state
+  const [deleteState, setDeleteState] = useState<{ id: string; state: "confirm" | "deleting" } | null>(null);
+
   // Selected user for access management
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [accessRows, setAccessRows] = useState<EventAccessRow[]>([]);
@@ -81,6 +84,25 @@ export default function AdminUsersPage() {
   }, [selectedUser, loadAccess]);
 
   if (!isAdmin) return <Navigate to="/" replace />;
+
+  async function handleDeleteUser(user: UserRow) {
+    if (!deleteState || deleteState.id !== user.id) {
+      setDeleteState({ id: user.id, state: "confirm" });
+      return;
+    }
+    if (deleteState.state !== "confirm") return;
+    setDeleteState({ id: user.id, state: "deleting" });
+    try {
+      await api(`/api/v1/admin/users/${user.id}`, { method: "DELETE" });
+      toast("User deleted", "success");
+      if (selectedUser?.id === user.id) setSelectedUser(null);
+      setDeleteState(null);
+      loadUsers();
+    } catch {
+      toast("Failed to delete user", "error");
+      setDeleteState(null);
+    }
+  }
 
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
@@ -195,25 +217,52 @@ export default function AdminUsersPage() {
         ) : (
           <div className="space-y-1">
             {users.map((u) => (
-              <button
-                key={u.id}
-                onClick={() => setSelectedUser(u)}
-                className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                  selectedUser?.id === u.id
-                    ? "bg-gray-800 text-blue-400"
-                    : "text-gray-300 hover:bg-gray-800/50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium">{u.name}</span>
-                  {u.isAdmin && (
-                    <span className="shrink-0 rounded bg-amber-600/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
-                      Admin
-                    </span>
-                  )}
-                </div>
-                <div className="truncate text-xs text-gray-500">{u.email}</div>
-              </button>
+              <div key={u.id} className="flex items-center gap-1">
+                <button
+                  onClick={() => setSelectedUser(u)}
+                  className={`min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                    selectedUser?.id === u.id
+                      ? "bg-gray-800 text-blue-400"
+                      : "text-gray-300 hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{u.name}</span>
+                    {u.isAdmin && (
+                      <span className="shrink-0 rounded bg-amber-600/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                  <div className="truncate text-xs text-gray-500">{u.email}</div>
+                </button>
+                {!u.isAdmin && (
+                  deleteState?.id === u.id && deleteState.state === "deleting" ? (
+                    <div className="shrink-0 p-1.5">
+                      <Spinner size="sm" />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleDeleteUser(u)}
+                      onBlur={() => { if (deleteState?.id === u.id && deleteState.state === "confirm") setDeleteState(null); }}
+                      title={deleteState?.id === u.id && deleteState.state === "confirm" ? "Click again to confirm" : "Delete user"}
+                      className={`shrink-0 rounded p-1.5 ${
+                        deleteState?.id === u.id && deleteState.state === "confirm"
+                          ? "font-bold text-red-400"
+                          : "text-gray-600 hover:bg-red-900/30 hover:text-red-400"
+                      }`}
+                    >
+                      {deleteState?.id === u.id && deleteState.state === "confirm" ? (
+                        <span className="flex h-4 w-4 items-center justify-center text-sm">?</span>
+                      ) : (
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  )
+                )}
+              </div>
             ))}
           </div>
         )}

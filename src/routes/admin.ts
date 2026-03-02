@@ -49,6 +49,28 @@ router.post("/users", validate(AddUserSchema), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Delete a non-admin user
+router.delete("/users/:userId", validate(UserIdParam, "params"), async (req, res, next) => {
+  try {
+    const db = getDb();
+    const { userId } = res.locals.params;
+
+    // Look up the user to check they exist and aren't an admin
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    if (config.adminEmails.includes(user.email.toLowerCase())) {
+      res.status(400).json({ error: "Cannot delete admin users" });
+      return;
+    }
+
+    await db.delete(users).where(eq(users.id, userId));
+    res.status(204).end();
+  } catch (err) { next(err); }
+});
+
 // Get all event access for a user
 router.get("/users/:userId/access", validate(UserIdParam, "params"), async (req, res, next) => {
   try {
