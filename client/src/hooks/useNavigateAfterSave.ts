@@ -15,13 +15,14 @@ export function useNavigateAfterSave() {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
-  const [target, setTarget] = useState<string | null>(null);
+  const [target, setTarget] = useState<{ path: string; replace?: boolean } | null>(null);
 
   useEffect(() => {
     if (target) {
-      navigateRef.current(target);
+      navigateRef.current(target.path, { replace: target.replace });
     }
   }, [target]);
 
-  return setTarget;
+  return (path: string, opts?: { replace?: boolean }) =>
+    setTarget({ path, replace: opts?.replace });
 }

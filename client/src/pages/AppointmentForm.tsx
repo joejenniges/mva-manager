@@ -38,7 +38,7 @@ export default function AppointmentForm() {
     Escape: () => {
       const active = document.activeElement as HTMLElement;
       if (active && INPUT_TAGS.has(active.tagName)) active.blur();
-      else navigate(id ? `/appointments/${id}` : "/appointments");
+      else navigate(id ? `/appointments/${id}` : "/appointments", { replace: !!id });
     },
   });
 
@@ -126,7 +126,7 @@ export default function AppointmentForm() {
       } else {
         await api<any>(`/api/v1/appointments/${id}`, { method: "PATCH", body });
         toast("Appointment updated", "success");
-        navigateTo(`/appointments/${id}`);
+        navigateTo(`/appointments/${id}`, { replace: true });
       }
     } catch (err: any) {
       setError(err.message || "Failed to save");
