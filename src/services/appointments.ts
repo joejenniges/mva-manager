@@ -46,7 +46,13 @@ export async function listAppointments(eventId: string, params: AppointmentListP
   if (patientId) conditions.push(eq(appointments.patientPersonId, patientId));
   if (organizationId) conditions.push(eq(appointments.organizationId, organizationId));
   if (dateFrom) conditions.push(gte(appointments.datetime, new Date(dateFrom)));
-  if (dateTo) conditions.push(lte(appointments.datetime, new Date(dateTo)));
+  // WHY: dateTo is a date string like "2025-09-18" which parses to midnight UTC.
+  // To include appointments on that day, set time to end of day.
+  if (dateTo) {
+    const end = new Date(dateTo);
+    end.setUTCHours(23, 59, 59, 999);
+    conditions.push(lte(appointments.datetime, end));
+  }
   if (documentFilter === "none") {
     conditions.push(notExists(
       db.select({ x: sql`1` }).from(documentAppointments)

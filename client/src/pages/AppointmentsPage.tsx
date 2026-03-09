@@ -292,20 +292,26 @@ export default function AppointmentsPage() {
           <option value="outstanding">Outstanding</option>
           <option value="paid">Paid</option>
         </select>
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-          onBlur={(e) => setDateFrom(normalizeDateValue(e.target.value))}
-          className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
-        />
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-          onBlur={(e) => setDateTo(normalizeDateValue(e.target.value))}
-          className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
-        />
+        <label className="flex items-center gap-1.5 text-sm text-gray-500">
+          From
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            onBlur={(e) => setDateFrom(normalizeDateValue(e.target.value))}
+            className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+          />
+        </label>
+        <label className="flex items-center gap-1.5 text-sm text-gray-500">
+          To
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            onBlur={(e) => setDateTo(normalizeDateValue(e.target.value))}
+            className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+          />
+        </label>
         {hasFilters && (
           <button
             onClick={clearFilters}
