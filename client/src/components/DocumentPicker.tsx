@@ -120,7 +120,7 @@ export default function DocumentPicker({ appointmentId, onLink, onClose }: Props
         {/* Body: two-panel grid */}
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(280px,1fr)_2fr] divide-x divide-gray-700">
           {/* Left panel: search + results */}
-          <div className="flex flex-col">
+          <div className="flex flex-col overflow-hidden">
             <div className="border-b border-gray-700 px-4 py-3">
               <input
                 ref={searchRef}
@@ -170,10 +170,10 @@ export default function DocumentPicker({ appointmentId, onLink, onClose }: Props
           </div>
 
           {/* Right panel: preview + action */}
-          <div className="flex flex-col">
+          <div className="flex flex-col overflow-hidden">
             {selected ? (
               <>
-                <div className="min-h-0 flex-1 p-4">
+                <div className="min-h-0 flex-1 overflow-auto p-4">
                   <DocumentViewer
                     documentId={selected.id}
                     mimeType={selected.mimeType}

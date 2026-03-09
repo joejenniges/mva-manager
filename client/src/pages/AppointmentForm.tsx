@@ -38,7 +38,10 @@ export default function AppointmentForm() {
     Escape: () => {
       const active = document.activeElement as HTMLElement;
       if (active && INPUT_TAGS.has(active.tagName)) active.blur();
-      else navigate(id ? `/appointments/${id}` : "/appointments", { replace: !!id });
+      // WHY: navigate(-1) for edit mode so the edit page doesn't pollute
+      // the history stack. Using replace or pushing to a URL creates duplicate
+      // entries that break the back button on the detail page.
+      else { if (id) navigate(-1); else navigate("/appointments"); }
     },
   });
 
@@ -126,7 +129,7 @@ export default function AppointmentForm() {
       } else {
         await api<any>(`/api/v1/appointments/${id}`, { method: "PATCH", body });
         toast("Appointment updated", "success");
-        navigateTo(`/appointments/${id}`, { replace: true });
+        navigateTo(-1);
       }
     } catch (err: any) {
       setError(err.message || "Failed to save");
@@ -260,12 +263,22 @@ export default function AppointmentForm() {
           >
             {saving ? "Saving..." : isNew ? "Create Appointment" : "Save Changes"}
           </button>
-          <Link
-            to={id ? `/appointments/${id}` : "/appointments"}
-            className="rounded-md bg-gray-800 px-6 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700"
-          >
-            Cancel
-          </Link>
+          {id ? (
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="rounded-md bg-gray-800 px-6 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+          ) : (
+            <Link
+              to="/appointments"
+              className="rounded-md bg-gray-800 px-6 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Link>
+          )}
         </div>
       </form>
     </div>

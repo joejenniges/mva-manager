@@ -15,14 +15,27 @@ export function useNavigateAfterSave() {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
-  const [target, setTarget] = useState<{ path: string; replace?: boolean } | null>(null);
+  const [target, setTarget] = useState<{ path: string; replace?: boolean } | { delta: number } | null>(null);
 
   useEffect(() => {
     if (target) {
-      navigateRef.current(target.path, { replace: target.replace });
+      if ("delta" in target) {
+        navigateRef.current(target.delta);
+      } else {
+        navigateRef.current(target.path, { replace: target.replace });
+      }
     }
   }, [target]);
 
-  return (path: string, opts?: { replace?: boolean }) =>
-    setTarget({ path, replace: opts?.replace });
+  function navigateTo(path: string, opts?: { replace?: boolean }): void;
+  function navigateTo(delta: number): void;
+  function navigateTo(pathOrDelta: string | number, opts?: { replace?: boolean }) {
+    if (typeof pathOrDelta === "number") {
+      setTarget({ delta: pathOrDelta });
+    } else {
+      setTarget({ path: pathOrDelta, replace: opts?.replace });
+    }
+  }
+
+  return navigateTo;
 }
