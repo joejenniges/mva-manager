@@ -188,7 +188,7 @@ export function generateReport(config: ReportConfig): Uint8Array {
       }
 
       // Patient total as a standalone summary row
-      startY = renderSummaryRow(doc, `${patientGroup.label} Total`, patientChargesCents, patientPaymentsCents, includeCharges, startY, pageWidth);
+      startY = renderSummaryRow(doc, `${patientGroup.label} Total`, patientChargesCents, patientPaymentsCents, patientMileageCents, includeCharges, includeMileage, startY, pageWidth);
       grandChargesCents += patientChargesCents;
       grandPaymentsCents += patientPaymentsCents;
       grandMileageCents += patientMileageCents;
@@ -208,7 +208,7 @@ export function generateReport(config: ReportConfig): Uint8Array {
   }
 
   // --- Grand Total ---
-  renderSummaryRow(doc, "Grand Total", grandChargesCents, grandPaymentsCents, includeCharges, startY, pageWidth, true);
+  renderSummaryRow(doc, "Grand Total", grandChargesCents, grandPaymentsCents, grandMileageCents, includeCharges, includeMileage, startY, pageWidth, true);
 
   return doc.output("arraybuffer") as unknown as Uint8Array;
 }
@@ -328,7 +328,56 @@ function renderAppointmentTable(
       showHead: "everyPage",
       showFoot: "lastPage",
     });
+  } else if (opts.includeMileage) {
+    // Summary view with mileage column
+    const head = [["Date", "Location", "Organization", "Insurance", "Charges", "Mileage", "Payments", "Balance"]];
+    const body: any[][] = [];
+
+    for (const appt of appointments) {
+      const costs = computeCosts(appt, opts.includeMileage, opts.mileageRate);
+      const totalCharge = costs.chargesCents + costs.mileageCents;
+      const balanceCents = totalCharge - costs.paymentsCents;
+
+      body.push([
+        formatDate(appt.datetime),
+        formatLocation(appt.location),
+        appt.organization?.name || "-",
+        formatInsuranceStatus(appt.insuranceStatus),
+        { content: formatDollars(costs.chargesCents), styles: { halign: "right" } },
+        { content: costs.mileageCents > 0 ? formatDollars(costs.mileageCents) : "-", styles: { halign: "right", textColor: costs.mileageCents > 0 ? COLORS.mileageText : undefined } },
+        { content: formatDollars(costs.paymentsCents), styles: { halign: "right" } },
+        { content: formatDollars(balanceCents), styles: { halign: "right" } },
+      ]);
+    }
+
+    const foot = opts.footLabel ? [[
+      { content: opts.footLabel, colSpan: 4, styles: footStyles },
+      { content: formatDollars(totalChargesCents - totalMileageCents), styles: { ...footStyles, halign: "right" as const } },
+      { content: formatDollars(totalMileageCents), styles: { ...footStyles, halign: "right" as const } },
+      { content: formatDollars(totalPaymentsCents), styles: { ...footStyles, halign: "right" as const } },
+      { content: formatDollars(totalBalanceCents), styles: { ...footStyles, halign: "right" as const } },
+    ]] : undefined;
+
+    autoTable(doc, {
+      startY: opts.startY,
+      head, body, foot,
+      theme: "grid",
+      headStyles: { fillColor: COLORS.headerBg, textColor: COLORS.headerText, fontSize: 8, fontStyle: "bold" },
+      bodyStyles: { fontSize: 8, textColor: COLORS.bodyText },
+      footStyles: { fillColor: COLORS.totalBg, textColor: COLORS.totalText, fontStyle: "bold", fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 24 },
+        4: { cellWidth: 22, halign: "right" },
+        5: { cellWidth: 22, halign: "right" },
+        6: { cellWidth: 22, halign: "right" },
+        7: { cellWidth: 22, halign: "right" },
+      },
+      margin: { left: 14, right: 14 },
+      showHead: "everyPage",
+      showFoot: "lastPage",
+    });
   } else {
+    // Summary view without mileage
     const head = [["Date", "Location", "Organization", "Insurance", "Charges", "Payments", "Balance"]];
     const body: any[][] = [];
 
@@ -386,7 +435,9 @@ function renderSummaryRow(
   label: string,
   chargesCents: number,
   paymentsCents: number,
+  mileageCents: number,
   includeCharges: boolean,
+  includeMileage: boolean,
   y: number,
   _pageWidth: number,
   isGrandTotal = false,
@@ -405,13 +456,28 @@ function renderSummaryRow(
   // WHY: No columnStyles here -- colSpan + explicit widths causes jsPDF.rect
   // to receive invalid dimensions. The label cell spans most columns via colSpan,
   // and the value cells get fixed widths via per-cell styles.
-  const valWidth = 24;
+  const valWidth = 22;
   if (includeCharges) {
     autoTable(doc, {
       startY: y,
       body: [[
         { content: label, colSpan: 6, styles: cellStyles },
         { content: formatDollars(chargesCents), styles: { ...cellStyles, halign: "right" as const, cellWidth: valWidth } },
+        { content: formatDollars(balanceCents), styles: { ...cellStyles, halign: "right" as const, cellWidth: valWidth } },
+      ]],
+      theme: "grid",
+      margin: { left: 14, right: 14 },
+      showHead: false,
+    });
+  } else if (includeMileage) {
+    // 8-column layout: label, charges (excl mileage), mileage, payments, balance
+    autoTable(doc, {
+      startY: y,
+      body: [[
+        { content: label, colSpan: 4, styles: cellStyles },
+        { content: formatDollars(chargesCents - mileageCents), styles: { ...cellStyles, halign: "right" as const, cellWidth: valWidth } },
+        { content: formatDollars(mileageCents), styles: { ...cellStyles, halign: "right" as const, cellWidth: valWidth } },
+        { content: formatDollars(paymentsCents), styles: { ...cellStyles, halign: "right" as const, cellWidth: valWidth } },
         { content: formatDollars(balanceCents), styles: { ...cellStyles, halign: "right" as const, cellWidth: valWidth } },
       ]],
       theme: "grid",
