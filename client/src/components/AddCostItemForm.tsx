@@ -138,6 +138,17 @@ const AddCostItemForm = forwardRef<AddCostItemFormHandle, Props>(function AddCos
 
     setAdding(true);
     try {
+      // Auto-create charge code if it doesn't exist yet
+      if (newItem.billingCode && newItem.description) {
+        const exists = chargeCodes.some((cc) => cc.code === newItem.billingCode);
+        if (!exists) {
+          const created = await api<ChargeCode>("/api/v1/charge-codes", {
+            body: { code: newItem.billingCode, description: newItem.description },
+          });
+          setChargeCodes((prev) => [...prev, created].sort((a, b) => a.code.localeCompare(b.code)));
+        }
+      }
+
       await api(`/api/v1/appointments/${appointmentId}/cost-items`, {
         body: {
           description: newItem.description || null,

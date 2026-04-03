@@ -136,6 +136,13 @@ export default function ChargeCodesPage() {
               Cancel
             </button>
           </div>
+        ) : canEdit("charge_codes") ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); startEdit(row); }}
+            className="text-left text-gray-300 hover:text-blue-400"
+          >
+            {row.description}
+          </button>
         ) : (
           <span className="text-gray-300">{row.description}</span>
         ),
