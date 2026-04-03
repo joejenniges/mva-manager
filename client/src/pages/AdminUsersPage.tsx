@@ -41,6 +41,7 @@ const ENTITY_LABELS: Record<EntityType, string> = {
   activities: "Activities",
   person_roles: "Person Roles",
   doc_types: "Doc Types",
+  charge_codes: "Charge Codes",
   events: "Events",
 };
 

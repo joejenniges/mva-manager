@@ -284,6 +284,19 @@ export const documentOrganizations = pgTable("document_organizations", {
 ]);
 
 // =============================================================================
+// Charge Codes
+// =============================================================================
+
+export const chargeCodes = pgTable("charge_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 50 }).notNull(),
+  description: varchar("description", { length: 500 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+// =============================================================================
 // Appointment Templates
 // =============================================================================
 
@@ -329,6 +342,7 @@ export const eventsRelations = relations(events, ({ many }) => ({
   activities: many(activities),
   documents: many(documents),
   documentTypes: many(documentTypes),
+  chargeCodes: many(chargeCodes),
   userEventAccess: many(userEventAccess),
 }));
 
@@ -432,6 +446,10 @@ export const documentPersonsRelations = relations(documentPersons, ({ one }) => 
 export const documentOrganizationsRelations = relations(documentOrganizations, ({ one }) => ({
   document: one(documents, { fields: [documentOrganizations.documentId], references: [documents.id] }),
   organization: one(organizations, { fields: [documentOrganizations.organizationId], references: [organizations.id] }),
+}));
+
+export const chargeCodesRelations = relations(chargeCodes, ({ one }) => ({
+  event: one(events, { fields: [chargeCodes.eventId], references: [events.id] }),
 }));
 
 export const appointmentTemplatesRelations = relations(appointmentTemplates, ({ one, many }) => ({

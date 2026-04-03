@@ -20,7 +20,7 @@ export interface UserInfo {
 
 export const ENTITY_TYPES = [
   "appointments", "persons", "organizations", "locations",
-  "documents", "templates", "activities", "person_roles", "doc_types", "events",
+  "documents", "templates", "activities", "person_roles", "doc_types", "charge_codes", "events",
 ] as const;
 
 export type EntityType = typeof ENTITY_TYPES[number];

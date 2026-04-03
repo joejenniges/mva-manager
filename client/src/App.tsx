@@ -21,6 +21,7 @@ import EventForm from "./pages/EventForm";
 import CalendarPage from "./pages/CalendarPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import TemplateForm from "./pages/TemplateForm";
+import ChargeCodesPage from "./pages/ChargeCodesPage";
 import MileagePage from "./pages/MileagePage";
 import ReportsPage from "./pages/ReportsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="person-roles" element={<PersonRolesPage />} />
           <Route path="activities" element={<ActivitiesPage />} />
           <Route path="document-types" element={<DocumentTypesPage />} />
+          <Route path="charge-codes" element={<ChargeCodesPage />} />
           <Route path="locations" element={<LocationsPage />} />
           <Route path="locations/new" element={<LocationForm />} />
           <Route path="locations/:id" element={<LocationForm />} />
