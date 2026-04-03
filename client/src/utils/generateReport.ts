@@ -181,7 +181,7 @@ export function generateReport(config: ReportConfig): Uint8Array {
           includeCharges, includeMileage, mileageRate, startY, pageWidth,
           footLabel: `${orgGroup.label} Subtotal`,
         });
-        startY = result.finalY;
+        startY = result.finalY + 4; // extra gap after org subtotal before next org header
         patientChargesCents += result.chargesCents;
         patientPaymentsCents += result.paymentsCents;
         patientMileageCents += result.mileageCents;
