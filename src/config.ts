@@ -2,7 +2,7 @@ import "dotenv/config";
 
 export const config = {
   port: parseInt(process.env.PORT || "3100", 10),
-  databaseUrl: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5433/mva-manager",
+  databaseUrl: process.env.DATABASE_URL || "postgresql://dev:dev@localhost:5432/mva-manager",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
   // WHY: ADMIN_EMAILS with ALLOWED_EMAILS fallback so existing deployments

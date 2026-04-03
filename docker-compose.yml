@@ -1,16 +1,4 @@
 services:
-  postgres:
-    image: postgres:17
-    container_name: mva-postgres
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: mva-manager
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-
   osrm:
     image: osrm/osrm-backend:latest
     container_name: mva-osrm
@@ -22,5 +10,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   osrm_data:

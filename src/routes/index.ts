@@ -21,6 +21,7 @@ import { eventsRouter } from "./events.js";
 import { mileageRouter } from "./mileage.js";
 import { adminRouter } from "./admin.js";
 import { dashboardRouter } from "./dashboard.js";
+import { reportsRouter } from "./reports.js";
 
 const router = Router();
 
@@ -90,5 +91,6 @@ router.use("/appointment-templates", requireAuth, requireEvent, requireEventAcce
 router.use("/calendar", requireAuth, requireEvent, requireEventAccess, calendarRouter);
 router.use("/mileage", requireAuth, requireEvent, requireEventAccess, mileageRouter);
 router.use("/dashboard", requireAuth, requireEvent, requireEventAccess, dashboardRouter);
+router.use("/reports", requireAuth, requireEvent, requireEventAccess, reportsRouter);
 
 export { router as apiRouter };

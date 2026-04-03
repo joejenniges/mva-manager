@@ -13,6 +13,7 @@ const DESTINATIONS = [
   { label: "Person Roles", path: "/person-roles" },
   { label: "Doc Types", path: "/document-types" },
   { label: "Mileage", path: "/mileage" },
+  { label: "Reports", path: "/reports" },
   { label: "Calendar", path: "/calendar" },
   { label: "Templates", path: "/templates" },
   { label: "New Event", path: "/events/new" },

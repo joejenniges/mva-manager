@@ -22,6 +22,7 @@ import CalendarPage from "./pages/CalendarPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import TemplateForm from "./pages/TemplateForm";
 import MileagePage from "./pages/MileagePage";
+import ReportsPage from "./pages/ReportsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 
 export default function App() {
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="templates/new" element={<TemplateForm />} />
           <Route path="templates/:id" element={<TemplateForm />} />
           <Route path="mileage" element={<MileagePage />} />
+          <Route path="reports" element={<ReportsPage />} />
           <Route path="admin/users" element={<AdminUsersPage />} />
         </Route>
       </Routes>
