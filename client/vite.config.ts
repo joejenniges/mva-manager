@@ -16,9 +16,9 @@ export default defineConfig({
     __COMMIT_HASH__: JSON.stringify(commitHash),
   },
   server: {
-    port: 5173,
+    port: Number(process.env.VITE_PORT) || 5173,
     proxy: {
-      "/api": "http://localhost:3100",
+      "/api": `http://localhost:${Number(process.env.VITE_API_PORT) || 3100}`,
     },
   },
   build: {

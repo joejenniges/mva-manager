@@ -346,7 +346,11 @@ export default function AppointmentDetail() {
       )}
 
       {/* [F] Cost items table */}
-      <CostTable items={appt.costItems} onDelete={canDelete("appointments") ? handleDeleteCostItem : undefined} />
+      <CostTable
+        items={appt.costItems}
+        onDelete={canDelete("appointments") ? handleDeleteCostItem : undefined}
+        onAddPayment={canEdit("appointments") ? (item) => costFormRef.current?.prefillPayment({ billingCode: item.billingCode, amount: item.amount }) : undefined}
+      />
 
       {/* [G] Add item form */}
       {canEdit("appointments") && (

@@ -19,6 +19,7 @@ interface ChargeCode {
 export interface AddCostItemFormHandle {
   scrollIntoView: (defaultType?: string) => void;
   focusDescription: (defaultType?: string) => void;
+  prefillPayment: (data: { billingCode: string | null; amount: string }) => void;
 }
 
 interface Props {
@@ -35,6 +36,9 @@ const AddCostItemForm = forwardRef<AddCostItemFormHandle, Props>(function AddCos
   const [newItem, setNewItem] = useState({ description: "", billingCode: "", amount: "", type: "charge" });
   const [adding, setAdding] = useState(false);
   const [amountError, setAmountError] = useState(false);
+  // WHY: Tracks the "$ button → payment prefill" workflow so Tab from description
+  // selects the amount text. Cleared after submit or once the user types a new code.
+  const paymentPrefillRef = useRef(false);
 
   // Charge code dropdown state
   const [chargeCodes, setChargeCodes] = useState<ChargeCode[]>([]);
@@ -80,6 +84,24 @@ const AddCostItemForm = forwardRef<AddCostItemFormHandle, Props>(function AddCos
       setTimeout(() => {
         codeSearchRef.current?.focus();
         setDropdownOpen(true);
+      }, 100);
+    },
+    prefillPayment: (data) => {
+      const code = data.billingCode || "";
+      setNewItem({
+        type: "payment",
+        billingCode: code,
+        description: "Insurance Payment",
+        amount: data.amount,
+      });
+      setCodeSearch(code);
+      setDropdownOpen(false);
+      setAmountError(false);
+      paymentPrefillRef.current = true;
+      containerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => {
+        descriptionRef.current?.focus();
+        descriptionRef.current?.select();
       }, 100);
     },
   }));
@@ -160,6 +182,7 @@ const AddCostItemForm = forwardRef<AddCostItemFormHandle, Props>(function AddCos
       setNewItem({ description: "", billingCode: "", amount: "", type: "charge" });
       setCodeSearch("");
       setAmountError(false);
+      paymentPrefillRef.current = false;
       onAdded();
       // Re-focus the code search for rapid entry
       setTimeout(() => {
@@ -175,6 +198,14 @@ const AddCostItemForm = forwardRef<AddCostItemFormHandle, Props>(function AddCos
     if (e.key === "Enter") {
       e.preventDefault();
       addItem();
+    }
+  }
+
+  function handleDescriptionKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Tab" && !e.shiftKey && paymentPrefillRef.current) {
+      e.preventDefault();
+      amountRef.current?.focus();
+      amountRef.current?.select();
     }
   }
 
@@ -212,6 +243,7 @@ const AddCostItemForm = forwardRef<AddCostItemFormHandle, Props>(function AddCos
               setCodeSearch(e.target.value);
               setNewItem((prev) => ({ ...prev, billingCode: e.target.value }));
               setDropdownOpen(true);
+              paymentPrefillRef.current = false;
             }}
             onFocus={() => setDropdownOpen(true)}
             onKeyDown={handleCodeSearchKeyDown}
@@ -244,6 +276,7 @@ const AddCostItemForm = forwardRef<AddCostItemFormHandle, Props>(function AddCos
           placeholder="Description"
           value={newItem.description}
           onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+          onKeyDown={handleDescriptionKeyDown}
           className="flex-1 rounded-md border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
         />
         <input
