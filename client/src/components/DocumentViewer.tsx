@@ -55,6 +55,15 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
   useEffect(() => {
     if (!isPdf) return;
 
+    // WHY: Reset state when documentId changes. Without this, stale pdfPages
+    // remain mounted with the same React keys, and the ref callback below
+    // short-circuits on existing firstChild — so the new canvases would never
+    // replace the old ones and the user sees the previous document.
+    setLoading(true);
+    setError(false);
+    setPdfPages([]);
+    setPdfDownloadUrl(null);
+
     const controller = new AbortController();
     let cancelled = false;
 
@@ -130,6 +139,12 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
   useEffect(() => {
     if (isPdf) return;
 
+    // Reset state on documentId change so the previous doc's blob URL
+    // (which is about to be revoked by the cleanup) doesn't remain in state.
+    setLoading(true);
+    setError(false);
+    setBlobUrl(null);
+
     const controller = new AbortController();
     let cancelled = false;
 
@@ -187,7 +202,11 @@ export default function DocumentViewer({ documentId, mimeType, title, fillHeight
             <div
               key={i}
               ref={(el) => {
-                if (el && !el.firstChild) el.appendChild(canvas);
+                // WHY: replaceChildren (not appendChild + skip-if-present) so a
+                // re-render with the same key swaps in the new canvas. The old
+                // "skip if firstChild" guard stranded stale canvases when the
+                // user switched between documents without closing the viewer.
+                if (el) el.replaceChildren(canvas);
               }}
             />
           ))}
