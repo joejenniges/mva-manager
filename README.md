@@ -91,5 +91,7 @@ that at the database you want to populate — **it deletes existing data first.*
 ## Deployment
 
 Production runs as two containers (app + Postgres) via `docker-compose.prod.yml`, behind
-an Nginx reverse proxy handling SSL. See `.env.example` for the required variables
-(`POSTGRES_PASSWORD`, Google OAuth credentials, `GEOCODIO_API_KEY`, `MAPBOX_TOKEN`, etc.).
+an Nginx reverse proxy handling SSL. An example proxy config is provided at
+`deploy/nginx-mva.example.com.conf` — swap in your own domain and certificate paths.
+See `.env.example` for the required variables (`POSTGRES_PASSWORD`, Google OAuth
+credentials, `GEOCODIO_API_KEY`, `MAPBOX_TOKEN`, etc.).
