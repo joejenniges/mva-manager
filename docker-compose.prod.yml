@@ -14,7 +14,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3100
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/mva-manager
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/mva-manager
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       ADMIN_EMAILS: ${ADMIN_EMAILS}
@@ -44,7 +44,7 @@ services:
     environment:
       POSTGRES_DB: mva-manager
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
